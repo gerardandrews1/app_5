@@ -397,7 +397,7 @@ class Booking:
             st.markdown("No email")        
 
         else:
-            st.markdown(f"""<p class='email-font'> You can make payment 
+            st.markdown(f"""<p class='email-font'> You can make payment \n
                         and check the details of your booking
                          <a href='{self.gsg_link}'>here</a> </p>""",
                           unsafe_allow_html = True)
