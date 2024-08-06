@@ -87,7 +87,7 @@ class Booking:
     def get_hn_props(self):
 
         # Get list of hn_props
-        with open("app/data/hn_props.txt", 'r') as hn_props_text:
+        with open("data/hn_props.txt", 'r') as hn_props_text:
             hn_props_raw = hn_props_text.read().split(",")
             self.hn_props = [x.strip() for x in hn_props_raw]
 
@@ -387,7 +387,7 @@ class Booking:
         st.markdown("""
                     <style>
                     .email-font {
-                        font-size:12px ;   white-space: nowrap;
+                        font-size:12px ; 
 
                     }
                     </style>
@@ -397,9 +397,18 @@ class Booking:
             st.markdown("No email")        
 
         else:
-            st.markdown(f"""<p class='email-font'> You can make payment \n\n
-                        and check the details of your booking
-                         <a href='{self.gsg_link}'>here</a> </p>""",
+            st.write(f"""
+                    Enhance Your Stay with Guest Services  
+                    Make your Niseko trip even better! 
+                    Add convenient transfers, expert lessons, or 
+                    top-quality rentals to your booking.  
+                    
+                    Popular Services:
+                    - Private Transfers: Stress-free airport-to-accommodation transportation  
+                    - Ski & Snowboard Lessons: Personalized instruction for all skill levels  
+                    - Equipment Rentals: Premium skis, snowboards, and accessories  
+                     
+                    <a href='{self.gsg_link}'> Book Your Services Here</a> """,
                           unsafe_allow_html = True)
 
         # st.markdown("<p class='big-font'> You can make payment and check the details of your booking [here.](%s)" % pay_str)
