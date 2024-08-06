@@ -14,9 +14,6 @@ from ratelimit import limits, sleep_and_retry
 
 # personal imports
 from src.components.api_list_booking import call_api
-from src.components.api_bks_changed_date import call_api_bks_changed
-from src.components.api_bks_changed_date import get_etl_time
-from src.components.api_bks_changed_date import transform_api_resp_df
 from src.components.booking import Booking
 
 
