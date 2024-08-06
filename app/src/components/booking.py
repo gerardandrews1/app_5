@@ -390,21 +390,12 @@ class Booking:
             that I would normallly write"""        
 
 
-        st.markdown("""
-                    <style>
-                    .email-font {
-                        font-size:12px ; 
-
-                    }
-                    </style>
-                    """, unsafe_allow_html=True)
-        
         if self.guest_email == None:
             st.markdown("No email")        
 
         else:
             st.write(f"""
-                    Enhance Your Stay with Guest Services  
+                    **Enhance Your Stay with Guest Services**  
                     Make your Niseko trip even better! 
                     Add convenient transfers, expert lessons, or 
                     top-quality rentals to your booking.  
@@ -432,7 +423,7 @@ class Booking:
 
         st.write(f"Created - {self.created_date} ")
 
-        st.write(f"{self.managed_by}")
+        st.write(f"{self.managed_by} Property")
 
         if self.active_check == True:
             st.write(f"Booking is **:green[Active]**")
