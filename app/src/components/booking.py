@@ -87,7 +87,7 @@ class Booking:
     def get_hn_props(self):
 
         # Get list of hn_props
-        with open("data/hn_props.txt", 'r') as hn_props_text:
+        with open("app/data/hn_props.txt", 'r') as hn_props_text:
             hn_props_raw = hn_props_text.read().split(",")
             self.hn_props = [x.strip() for x in hn_props_raw]
 
