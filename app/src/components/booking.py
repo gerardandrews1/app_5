@@ -8,7 +8,7 @@ import requests
 import numpy as np
 import streamlit as st
 
-from dotenv import load_dotenv
+
 from ratelimit import limits, sleep_and_retry
 from dataclasses import dataclass, asdict
 
