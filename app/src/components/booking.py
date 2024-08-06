@@ -377,7 +377,7 @@ class Booking:
         pass
 
 
-    def write_emails(self):
+    def write_gsg_upsell(self):
 
         """ The plan is that we want to use this function to
             write all of the email blah blah
@@ -397,11 +397,17 @@ class Booking:
             st.markdown("No email")        
 
         else:
-            st.markdown(f"<p class='email-font'> You can make payment and check the details of your booking <a href='{self.payment_link}'>here</a> </p>", unsafe_allow_html=True)
+            st.markdown(f"""<p class='email-font'> You can make payment 
+                        and check the details of your booking
+                         <a href='{self.gsg_link}'>here</a> </p>""",
+                          unsafe_allow_html = True)
 
         # st.markdown("<p class='big-font'> You can make payment and check the details of your booking [here.](%s)" % pay_str)
 
         pass
+
+
+
 
 
     def write_key_booking_info(self):
