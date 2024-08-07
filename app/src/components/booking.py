@@ -69,10 +69,11 @@ class Booking:
             # 2 here i use parsed data to add additional info to booking
 
             if self.booking_id:
-                self.rboss_launch = f"https://app.roomboss.com/ui/"+\
-                                     "booking/edit.jsf?bid={self.booking_id}" 
+                self.rboss_launch = \
+                f"https://app.roomboss.com/ui/booking/edit.jsf?bid={self.booking_id}" 
                 
-                self.gsg_link = f"https://holidayniseko2.evoke.jp/public/booking/order02.jsf?mv=1&vs=WinterGuestServices&bookingEid={self.eId}"
+                self.gsg_link = \
+                f"https://holidayniseko2.evoke.jp/public/booking/order02.jsf?mv=1&vs=WinterGuestServices&bookingEid={self.eId}"
         
             self.attribute_booking()
 
@@ -116,8 +117,8 @@ class Booking:
         self.nationality = lead_guest_dict.get("nationality", {None})
 
         if (self.guest_email != None) & (self.eId != None):
-            self.payment_link = f"https://holidayniseko.evoke.jp/public/"+\
-                            "yourbooking.jsf?id={self.eId}&em={self.guest_email}"
+            self.payment_link = \
+            f"https://holidayniseko.evoke.jp/public/yourbooking.jsf?id={self.eId}&em={self.guest_email}"
 
 
         return
