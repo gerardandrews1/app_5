@@ -1,4 +1,6 @@
 # Booking class to parse API response 
+# and organise booking details
+
 import csv
 import datetime
 import json
@@ -8,10 +10,13 @@ import requests
 import numpy as np
 import streamlit as st
 
-
 from ratelimit import limits, sleep_and_retry
 from dataclasses import dataclass, asdict
 
+## TODO separate streamlit UI processes to separate class
+## TODO get min checkin and max check-out date for email subject 
+## TODO finish  attribute booking and move higher
+## TODO find a way to separate 2 x same room diff dates kevinfz example
 
 @dataclass
 class Booking:
@@ -20,61 +25,67 @@ class Booking:
      Parse API response from json
     """
     
-    given_name: str
-    family_name: str
-    guest_email: str
-    booking_id: int # maybe change this name hey
-    eId: int
-    main_component: str
-    created_date: str
-    inv_pays = False
-    rboss_launch = str
+    # given_name: str
+    # family_name: str
+    # guest_email: str
+    # booking_id: int # maybe change this name hey
+    # eId: int
+    # main_component: str
+    # created_date: str
+    # inv_pays = False
+    # rboss_launch = str
 
 
     def __init__(self, json_response, api_type):
         
-
+        self.json_response = json_response
         self.booking_id = ""
         self.eId = ""
         self.custom_id = ""
 
-
+        self.service_guide = \
+            ("https://holidayniseko.com/sites/default"
+             "/files/services/2024-08/Holiday%20Niseko"
+             "%20Guest%20Service%20Guide%202024_2025.pdf")
+        
         self.get_hn_props()
 
         # 1 Get the dictionaries
-
-        # this is where I get check the API type
-        self.json_response = json_response
-
-
+        # check API type
         if api_type == "listBooking":
                 
-            self.booking_dict = json_response.get("order", {}).get("bookings")
-            self.lead_guest_dict = json_response.get("order", {}).get("leadGuest", {})
-            self.pay_inv_dict = json_response.get("order", {}).get("invoicePayments", {})
+            # accom & service bookings
+            self.booking_dict = json_response\
+                .get("order", {}).get("bookings")
+            
+            self.lead_guest_dict = json_response\
+                .get("order", {}).get("leadGuest", {})
+            
+            self.pay_inv_dict = json_response\
+                .get("order", {}).get("invoicePayments", {})
 
         
-            # 2 Parse the dictionaries
+            # 2 Parse dictionaries
             if self.booking_dict is not None:
                 self.parse_book_dict()
 
             self.parse_lead_guest(self.lead_guest_dict)
 
-            
-            # Here I feel like I need to run self check function on booking
-            # like check if accom or float, check if cancelled, check blah blah
-
             if self.pay_inv_dict:
                 self.parse_payment_info(self.pay_inv_dict)
-            # 2 here i use parsed data to add additional info to booking
-
+            
+            # 2 here i use parsed data for link creation
             if self.booking_id:
                 self.rboss_launch = \
-                f"https://app.roomboss.com/ui/booking/edit.jsf?bid={self.booking_id}" 
+                "https://app.roomboss.com/ui/"\
+                "booking/edit.jsf?bid="\
+                + self.booking_id 
                 
                 self.gsg_link = \
-                f"https://holidayniseko2.evoke.jp/public/booking/order02.jsf?mv=1&vs=WinterGuestServices&bookingEid={self.eId}"
-        
+                "https://holidayniseko2.evoke.jp/public/booking/order02"\
+                ".jsf?mv=1&vs=WinterGuestServices&bookingEid="\
+                + str(self.eId)
+                
             self.attribute_booking()
 
         else:
@@ -82,12 +93,11 @@ class Booking:
             st.write("Incorrect API type")     
         
         
-  
-        # Helper function used to colour payments
-
     def get_hn_props(self):
 
-        # Get list of hn_props
+        """Get list of hn_props"""
+        
+        #try catch to work locally
         try: 
             with open("data/hn_props.txt", 'r') as hn_props_text:
                 hn_props_raw = hn_props_text.read().split(",")
@@ -102,12 +112,15 @@ class Booking:
 
 
     def print_json(self):
-        st.write(self.json_response)
 
+        """Used during testing to see the full json response"""
+        
+        st.write(self.json_response)
+        return
 
     def parse_lead_guest(self, lead_guest_dict):
         
-        # Get lead guest info from guest dict
+        """ Get lead guest info from guest dict"""
 
         self.guest_email = lead_guest_dict.get("email", {None})
         self.guest_phone = lead_guest_dict.get("phoneNumber", {None})
@@ -116,18 +129,18 @@ class Booking:
         self.full_name = f"{self.given_name} {self.family_name}"
         self.nationality = lead_guest_dict.get("nationality", {None})
 
+        # Don't show payment link if no eid or no email
         if (self.guest_email != None) & (self.eId != None):
             self.payment_link = \
-            f"https://holidayniseko.evoke.jp/public/yourbooking.jsf?id={self.eId}&em={self.guest_email}"
-
+            "https://holidayniseko.evoke.jp/public/yourbooking"\
+            ".jsf?id=" + str(self.eId) + "&em=" + self.guest_email
 
         return
 
-    
-    
     def parse_book_dict(self):
         
-        # Checks if accom or service booking and then parses accordingly
+        """Checks if accom or service item and parse accordingly"""
+
         booking_dict = self.booking_dict
 
         for booking in booking_dict:
@@ -143,13 +156,10 @@ class Booking:
     
     def parse_accom_item(self, booking):
         
-        # create all the values/attributes for the booking
-        # return nothing really, maybe just a true
-
-        booking_df = pd.DataFrame(
-                            columns=["Check-in","Check-out", "Nights",
-                                    "Guests", "Property","Room","Rate"])
-
+        """
+        Get key info for accom item not nested within the 
+        room dictionary 
+        """
 
         self.eId = booking.get("eId", {None})
         self.active_check = booking.get("active")
@@ -157,42 +167,45 @@ class Booking:
         self.booking_source = booking.get("bookingSource", {})
         self.created_user = booking.get("createdUser", {})
         self.custom_id = booking.get("customId")
+        self.notes = booking.get("notes")
+        self.url = booking.get("url")
+
+        # offset creation time to local time
         created_date = booking.get("createdDate", {})
         created_date = pd.to_datetime(created_date) + pd.offsets.Hour(9)
-
-
         self.created_date = created_date.strftime("%d-%b-%Y")
+        
         self.extent = booking.get("extent", {})
         self.vendor_url = booking.get("hotel", {}).get("hotelUrl", {})
         self.vendor = booking.get("hotel", {}).get("hotelName", {})
 
-        self.managed_by = ""
-
-
+        # Check if self managed or not 
         if self.vendor in self.hn_props:
             self.managed_by = "HN"
 
-
         else:
-
             self.managed_by = "Non Managed"
 
-        self.url = booking.get("url")
         self.rooms_booked = booking.get("items", {})
-        self.notes = booking.get("notes")
-
-        # Finally extract the rooms booked
+        
+        # Pass rooms dict to parsing function
         self.room_dict = self.parse_room_list(self.rooms_booked)
 
-        pass
+        return
  
     def parse_room_list(self, room_list):
         
-
-        # Next I need to parse the rooms
+        """
+        Parses room dictionary and calculates total 
+        cost for each room
+        """
+        
         rooms_dict = {}
-        booking_accom_total = 0
+        self.booking_accom_total = 0
+        self.guests = 0
 
+
+        # loop through each room and create a dictionary for each room
         for room in room_list:
 
             curr_room_dict = {}
@@ -201,27 +214,22 @@ class Booking:
             curr_room_dict["room_name"] = room_name
 
             dict_key = f"{self.vendor} {room_name}"
-            vendor = self.vendor
 
             room_checkin = room.get("checkIn", {})
             room_checkin = room_checkin.replace("-","/")
-
-            self.accom_checkin = room_checkin
             curr_room_dict["check_in"] = room_checkin
 
             room_checkout = room.get("checkOut", {})
             room_checkout = room_checkout.replace("-","/")
-            self.accom_checkout = room_checkout
             curr_room_dict["check_out"] = room_checkout
-            
             
             room_guests = room.get("numberGuests", {})
             curr_room_dict["number_guests"] = room_guests
-            self.guests = room_guests
+            self.guests += room_guests
 
             nights = (pd.to_datetime(room_checkout) - pd.to_datetime(room_checkin)).days
-            self.nights = nights
             curr_room_dict["nights"] = nights
+            self.nights = nights
 
             curr_room_dict["room_rack"] = room.get("priceRack", {})
             curr_room_dict["room_net"] = room.get("priceNet", {})
@@ -229,24 +237,23 @@ class Booking:
             price_retail =  room.get("priceRetail", {})
             curr_room_dict["room_retail_price"] = price_retail
 
-            
+            # Add back to master dictionary          
             rooms_dict[f"{dict_key}"] = curr_room_dict
             
             # Add to the total if multiple rooms
-            booking_accom_total += price_retail
+            self.booking_accom_total += price_retail
    
         # set the total for the booking
-        self.accom_total = booking_accom_total
+        self.accom_total = self.booking_accom_total
 
-
-            
         return rooms_dict
             
 
-
     def parse_service_item(self, booking):
         
-        # I'd like to make a headline for each guest service
+        """ 
+        Parse each guest service
+        """
 
         active = booking.get("active", {})
         self.eId  = booking.get("eId", {})
@@ -279,7 +286,7 @@ class Booking:
                 
                 service_name = f"{service_name} - {days} days"
 
-            return None
+            return 
 
     def parse_payment_info(self, pay_inv_dict):
 
@@ -288,7 +295,7 @@ class Booking:
         Set the self payment_info_df
         
             Returns
-                payment_info_df: dataframe to be written to app (not yet styled)
+                payment_info_df: dataframe to be written to app not yet styled
         """
 
         self.payment_info_df = pd.DataFrame(
@@ -296,19 +303,17 @@ class Booking:
                                "Due Date", "Payment Amount", "Date Paid",
                                "Payment ID"])
 
-
-
         for invoice in pay_inv_dict:
 
             invoice_number = invoice.get("invoiceNumber")
             amount = invoice.get("invoiceAmount", {})
-            # st.write(amount)
-            # amount = f"¥{amount:,.0f}"
+            st.write(invoice)    
             invoice_date = invoice.get("invoiceDate", {})
             invoice_number = invoice.get("invoiceNumber", {})
-            due_date = invoice.get("invoiceDueDate", {})
+            invoice_due_date = invoice.get("invoiceDueDate", {})
+            
             payment_amount = invoice.get("paymentAmount", {})
-            # payment_amount = f"¥{payment_amount:,.0f}"
+            
 
             payment_date = invoice.get("paymentDate", {})
             if payment_date == None:
@@ -318,7 +323,7 @@ class Booking:
             
             # Do a quick regex check for flywire toka
             
-            pay_line = [invoice_number, invoice_date, amount, due_date,
+            pay_line = [invoice_number, invoice_date, amount, invoice_due_date,
                         payment_amount, payment_date, payment_id]
             # st.write(pay_line)
             
@@ -397,6 +402,7 @@ class Booking:
         else:
             st.write(f"""
                     **Enhance Your Stay with Guest Services**  
+                       
                     Make your Niseko trip even better! 
                     Add convenient transfers, expert lessons, or 
                     top-quality rentals to your booking.  
@@ -406,7 +412,12 @@ class Booking:
                     - Ski & Snowboard Lessons: Personalized instruction for all skill levels  
                     - Equipment Rentals: Premium skis, snowboards, and accessories  
                      
-                    <a href='{self.gsg_link}'> Book Your Services Here</a> """,
+                    <a href='{self.gsg_link}'> Book Your Services Here</a>  
+                     
+                    Additional Information: Browse our <a href='{self.service_guide}'> Guest Services Guide</a> for services, pricing, and availability.
+
+                    Book your extras early - popular services fill up fast!
+                    """,
                           unsafe_allow_html = True)
 
         # st.markdown("<p class='big-font'> You can make payment and check the details of your booking [here.](%s)" % pay_str)
@@ -498,7 +509,11 @@ class Booking:
                 
             booking_df.loc[len(booking_df)] = booking_line
 
+        # Here I set the accom min check in and max check out
+        self.accom_checkin = booking_df["Check-in"].min()
+        self.accom_checkout = booking_df["Check-out"].max()
 
+        st.write(f"ACCOM CHECKIN {self.accom_checkin}")
         st.markdown(booking_df.style.hide(axis="index")\
                 .set_table_styles([{'selector': 'th', 'props': [('font-size', '10pt'),('text-align','center')]}])\
                 .set_properties(**{'font-size': '8pt','text-align':'center'}).to_html(),unsafe_allow_html=True)
