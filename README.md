@@ -17,12 +17,12 @@ The app is accessed by the url provided to users.
 
 ## Dependencies
 
-ratelimit
+ratelimit  
 streamlit
 
 
 ## Contact
 
-Your Name - Andrew Stevens - 
+Andrew Stevens - andrew@holidayniseko.com 
 
-Project Link: [https://github.com/yourusername/app_5](https://github.com/gerardandrews1/app_5.git)
+Link: [https://github.com/yourusername/app_5](https://github.com/gerardandrews1/app_5.git)
