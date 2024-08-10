@@ -1,6 +1,7 @@
  
 # Parse the available hotels from json 
 # response to list available stays
+import pandas as pd
 
 from src.utils import get_prop_management 
 

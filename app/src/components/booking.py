@@ -12,6 +12,7 @@ import streamlit as st
 
 from ratelimit import limits, sleep_and_retry
 from dataclasses import dataclass, asdict
+# from src.utils import highlight_unpaid
 
 ## TODO separate streamlit UI processes to separate class
 ## TODO get min checkin and max check-out date for email subject 
@@ -25,17 +26,6 @@ class Booking:
      Parse API response from json
     """
     
-    # given_name: str
-    # family_name: str
-    # guest_email: str
-    # booking_id: int # maybe change this name hey
-    # eId: int
-    # main_component: str
-    # created_date: str
-    # inv_pays = False
-    # rboss_launch = str
-
-
     def __init__(self, json_response, api_type):
         
         self.json_response = json_response
@@ -156,8 +146,8 @@ class Booking:
     
     def parse_accom_item(self, booking):
         
-        """
-        Get key info for accom item not nested within the 
+        """ Get key info for accom item not nested within the 
+        
         room dictionary 
         """
 
@@ -251,9 +241,7 @@ class Booking:
 
     def parse_service_item(self, booking):
         
-        """ 
-        Parse each guest service
-        """
+        """Parse each guest service booking"""
 
         active = booking.get("active", {})
         self.eId  = booking.get("eId", {})
@@ -290,12 +278,9 @@ class Booking:
 
     def parse_payment_info(self, pay_inv_dict):
 
-        """
-        Get the payment info dictionary and parse into dataframe
-        Set the self payment_info_df
+        """Get the payment info dictionary and parse into dataframe
         
-            Returns
-                payment_info_df: dataframe to be written to app not yet styled
+        Set the self payment_info_df
         """
 
         self.payment_info_df = pd.DataFrame(
@@ -307,7 +292,7 @@ class Booking:
 
             invoice_number = invoice.get("invoiceNumber")
             amount = invoice.get("invoiceAmount", {})
-            st.write(invoice)    
+
             invoice_date = invoice.get("invoiceDate", {})
             invoice_number = invoice.get("invoiceNumber", {})
             invoice_due_date = invoice.get("invoiceDueDate", {})
@@ -325,7 +310,7 @@ class Booking:
             
             pay_line = [invoice_number, invoice_date, amount, invoice_due_date,
                         payment_amount, payment_date, payment_id]
-            # st.write(pay_line)
+
             
             self.payment_info_df.loc[len(self.payment_info_df)] = pay_line
 
@@ -338,25 +323,23 @@ class Booking:
 
     def write_payment_info(self):
 
-        """ Creates the payments and invoices dataframe to the system
+        """Writes the payment info and invoices dataframe
             
-            Returns
-                payment_html_string: pandas styler to render dataframe in html
         """
         management = self.managed_by
 
-
         def highlight_unpaid(s):
-            """ Used to colour payment df if not paid """
             
+            """ Used to colour payment df if not paid """
 
             # For non managed not paid
-
-            if (s["Payment Amount"] == 0) & (self.managed_by == "Non Managed") & (s.Amount > 0):
+            if (s["Payment Amount"] == 0) & \
+                (self.managed_by == "Non Managed") & (s.Amount > 0):
                 return ['background-color: #ffb09c'] * len(s)
             
             # HN Managed not paid
-            elif (s["Payment Amount"] == 0) & (self.booking_source_1 != "OTA") & (s.Amount > 0):
+            elif (s["Payment Amount"] == 0) & \
+                (self.booking_source_1 != "OTA") & (s.Amount > 0):
 
                 return ['background-color: #ffead5'] * len(s)    
             
@@ -372,7 +355,7 @@ class Booking:
             payment_info_df["Date Created"] = pd.to_datetime(payment_info_df["Date Created"])
             payment_info_df["Due Date"] = pd.to_datetime(payment_info_df["Due Date"])
 
-            payment_info_df["Date Paid"] = pd.to_datetime(payment_info_df["Date Paid"], errors="coerce")
+            payment_info_df["Date Paid  "] = pd.to_datetime(payment_info_df["Date Paid"], errors="coerce")
 
 
             st.markdown(self.payment_info_df.style.hide(axis="index")
@@ -391,11 +374,8 @@ class Booking:
 
     def write_gsg_upsell(self):
 
-        """ The plan is that we want to use this function to
-            write all of the email blah blah
-            that I would normallly write"""        
-
-
+        """Write the guest service upsell spiel"""
+  
         if self.guest_email == None:
             st.markdown("No email")        
 
@@ -425,12 +405,10 @@ class Booking:
         pass
 
 
-
-
-
     def write_key_booking_info(self):
 
-        # st.write(f"{self.active_check}")
+        """Writes key info to left col app"""
+
         st.markdown(f"###### {self.eId} - {self.full_name}")
 
         st.write(f"Created - {self.created_date} ")
@@ -457,6 +435,8 @@ class Booking:
 
     def write_email_subject(self):
 
+        """Subject line for the email"""
+
         self.email_subject_line = (f"Booking #{self.eId} {self.vendor} "
                                 f"{self.accom_checkin} - {self.accom_checkout} "
                                 f"({self.nights} nights, {self.guests} guests)")
@@ -468,7 +448,7 @@ class Booking:
 
     def write_guest_info(self):
         
-
+        """Guest contact details"""
         if self.guest_phone:
             st.write(f":telephone_receiver:", self.guest_phone)
 
@@ -481,11 +461,12 @@ class Booking:
         pass
 
 
-
-
     def write_room_info(self, room_dict):
-        """Take room dictionary return 
-           the room info in df format to write to streamlit"""
+        
+        """Take room dictionary return the room 
+        
+        info in df format to write to streamlit
+        """
 
         # init dataframe for accom bookings
         booking_df = pd.DataFrame(
@@ -515,8 +496,12 @@ class Booking:
 
         st.write(f"ACCOM CHECKIN {self.accom_checkin}")
         st.markdown(booking_df.style.hide(axis="index")\
-                .set_table_styles([{'selector': 'th', 'props': [('font-size', '10pt'),('text-align','center')]}])\
-                .set_properties(**{'font-size': '8pt','text-align':'center'}).to_html(),unsafe_allow_html=True)
+            .set_table_styles([{'selector': 'th', 
+                                'props': [('font-size',
+                                            '10pt'),('text-align','center')]}])\
+            .set_properties(**{'font-size': '8pt',
+                               'text-align':'center'}).to_html(),
+                               unsafe_allow_html=True)
 
    
         return None
@@ -524,18 +509,16 @@ class Booking:
 
     def attribute_booking(self):
 
-        """
-        Split booking source by channel 1 and 2 and set self.channel 1 & 2
+        """Split sales channel 1 and 2 and set self.channel 1 & 2
+        
         Channel 1 = OTA, Website, Agent
+        
         Channel 2 = Agent Name, Airbnb, Mailchimp, Facebook etc.
         """
         
         ### I reckon find the source 2 and work backwards
         self.booking_source_1 = ""
         self.booking_source_2 = ""
-
-        # st.write(self.created_user, self.custom_id, self.booking_source)
-
 
         # If airbnb then check custom id matches, bk source: rb channel manager
         airbnb_prefixes = ["hmc" "HMNAYYQCQR"]  # len() of custom id string is 10
@@ -550,7 +533,6 @@ class Booking:
 
                     self.booking_source_2 = "Airbnb"
 
-            # st.write(self.booking_source_2)
         # booking.com, created user: Null, bk source: rb channel manager
         booking_dot_com = [4187716971, 4129682983, 4009522141, 4146358347]
 
@@ -568,27 +550,24 @@ class Booking:
                 self.booking_source_2 = self.custom_id 
             # if self.custom_id != "":
 
-
         pass
 
-
-    def to_dataframe(self, json_response):
-
-        if self.managed_by == "HN":
-            hn_prop = 1
-        else:
-            hn_prop = 0
-
-        bk_details_dict = {
-
-                        "Created" : self.created_date,
-                        "ID" : self.eId,
-                        "Lead Guest" : self.full_name,
-                        "Vendor" : self.vendor,
-                        "Gross" : "¥0 TO DO",
-                        "Residency" : "TO DO",
-                        "Checkin Date" : self.accom_checkin,
-                        "Nights" : self.nights,
-                        "HN_Prop" : hn_prop
-                        }
         
+    def highlight_unpaid(s):
+
+        """ Used to colour payment df if not paid """
+
+        # For non managed not paid
+        if (s["Payment Amount"] == 0) & \
+            (self.managed_by == "Non Managed") & (s.Amount > 0):
+            return ['background-color: #ffb09c'] * len(s)
+        
+        # HN Managed not paid
+        elif (s["Payment Amount"] == 0) & \
+            (self.booking_source_1 != "OTA") & (s.Amount > 0):
+
+            return ['background-color: #ffead5'] * len(s)    
+        
+        # Paid
+        else:
+            return ['background-color: white'] * len(s)

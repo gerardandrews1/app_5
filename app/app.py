@@ -35,20 +35,6 @@ def highlight_not_paid(s):
         return ['background-color: white'] * len(s)
     
 
-
-
-    # Make first and last name one column
-
-    enq_df["Name"] = enq_df["First Name"].astype(str) + " " + enq_df["Last Name"].astype(str)
-    enq_df["PAX"] = enq_df["Adults"] + enq_df["Children 13 - 15 years"] + enq_df["Children 7 - 12 years"] 
-
-    enq_df = enq_df[["Booking ID", "Name", "Month Split", 
-                     "Nights", "Booking Source", "Country", 
-                     "Bedrooms", "PAX" , "Enquiry Date"]]
-
-    return enq_df
-
-
 ################ SIDEBAR START  ################# 
 
 with st.sidebar:
