@@ -6,7 +6,7 @@ import datetime
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
-import os
+
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -17,6 +17,7 @@ import time
 
 from dotenv import load_dotenv
 from plotly.subplots import make_subplots
+
 from src.utils import load_csv_data
 from src.utils import create_otd_df
 from src.utils import month_splits_2324
@@ -40,6 +41,9 @@ raw_df = load_csv_data("../../Downloads/Bookings Clean.csv")
 accom_df = clean_accom_df(raw_df)
 
 otd_df = create_otd_df(accom_df, "Gross")
+
+gs_df = load_csv_data("../../Downloads/GS Bookings Clean.csv")
+gs_df.Created = pd.to_datetime(gs_df.Created)
 
 # Enquiries
 enq_df = load_csv_data("../../Downloads/Enquiries Clean.csv")
@@ -69,9 +73,10 @@ ga_2023.Date = pd.to_datetime(ga_2023.Date)
 ############## FIGURE SETUP #################
 
 fig,  (ax0, ax1, ax2, ax3,
-       ax4, ax5, ax6, ax7) = plt.subplots(8, 2,
-                                     width_ratios=[10, 0.8],
-                                     figsize = (8,6.6))
+       ax4, ax5, ax6, ax7,
+       ax8) = plt.subplots(9, 2,
+                           width_ratios=[10, 0.8],
+                           figsize = (8,5.2))
 
 for x,y in enumerate(fig.axes):
 
@@ -88,7 +93,7 @@ for x,y in enumerate(fig.axes):
 
     fig.axes[x].get_xaxis().set_visible(False)
 # Activates first plot
-plt.subplot(8,2,1)
+plt.subplot(9,2,1)
 
 
 ############## Web Enquiries #################
@@ -96,18 +101,14 @@ plt.subplot(8,2,1)
 today_str = "2023" + datetime.datetime.today().strftime('%Y-%m-%d')[4:]
 today_date = pd.to_datetime(today_str)
 
+# Get metrics for graphs
+enq_2324_df = enq_df[enq_df.Season == "'23/24'"]
 
-enq_2324 = enq_df[enq_df.Season == "'23/24'"]
-enq_2425 = enq_df[enq_df.Season == "'24/25'"]
+total_enq_2324 = enq_df[enq_df.Season == "'23/24'"].Email.nunique()
+total_enq_2425 = enq_df[enq_df.Season == "'24/25'"].Email.nunique()
+total_enq_otd_2324 = enq_2324_df\
+    [enq_2324_df["Enquiry Date"] < today_date].Email.nunique()
 
-enq_otd_2324 = enq_2324[enq_2324["Enquiry Date"] < today_date]
-
-total_enq_otd_2324 = enq_otd_2324.Email.nunique()
-
-
-
-total_enq_2324 = enq_2324.Email.nunique()
-total_enq_2425 = enq_2425.Email.nunique()
 
 enq_percent = total_enq_2425/total_enq_otd_2324
 
@@ -134,8 +135,8 @@ fig.axes[0].set_title(f"2024 Total vs {today_date.strftime('%b %d %Y')}",
                        loc= "left",
                        pad = 20)
 
-# Add _x 
-plt.subplot(8,2,2)
+# Add x factor
+plt.subplot(9,2,2)
 
 plt.text(0.15, y = 0.45, s = f"{round(enq_percent,2)}x", fontsize = 9)
 plt.yticks([])
@@ -144,7 +145,7 @@ plt.yticks([])
 ########################   TOTAL BOOKINGS ######################
 
 
-plt.subplot(8, 2, 3)
+plt.subplot(9, 2, 3)
 
 total_bk_2425 = accom_df[accom_df.Season == "'24/25'"].ID.nunique()
 total_bk_2324 = accom_df[accom_df.Season == "'23/24'"].ID.nunique()
@@ -162,14 +163,14 @@ plt.text(total_bk_2324 - 40, y = 1.2, s = f"{total_bk_2324:,}", fontsize = 8, co
 plt.text(total_bk_2425 - 75, y = -0.2, s = f"{total_bk_2425}", fontsize = 9, color = "white")
 plt.text(total_bk_otd_2324 - 65, y = 0.8, s = f"{total_bk_otd_2324}", fontsize = 8, color = "#222222"	)
 
-plt.subplot(8,2,4)
+plt.subplot(9,2,4)
 plt.text(0.15, y = 0.45, s = f"{round(bks_percent,2)}x", fontsize = 9)
 plt.yticks([])
 
 
 ####################### GROSS ###############################
 
-plt.subplot(8, 2, 5)
+plt.subplot(9, 2, 5)
 
 
 total_gross_2425 = accom_df[accom_df.Season == "'24/25'"].Gross.sum()
@@ -194,7 +195,7 @@ plt.text(total_gross_2425 * 0.89, y = -0.15, s = f"{display_2425}M", fontsize = 
 plt.text(total_gross_otd_2324 * 0.85, y = 0.85, s = f"{display_otd_2324}M", fontsize = 8, color = "#222222")
 
 # Plot the x 
-plt.subplot(8,2,6)
+plt.subplot(9,2,6)
 
 plt.text(0.15, y = 0.45, s = f"{round(gross_percent,2)}x", fontsize = 9)
 plt.yticks([])
@@ -202,7 +203,7 @@ plt.yticks([])
 
 ######################  NIGHTS    ####################################
 
-plt.subplot(8, 2, 7)
+plt.subplot(9, 2, 7)
 
 total_nights_2425 = accom_df[accom_df.Season == "'24/25'"].Nights.sum()
 total_nights_2324 = accom_df[accom_df.Season == "'23/24'"].Nights.sum()
@@ -223,14 +224,14 @@ plt.text(total_nights_2425 * 0.85, y = -0.2, s = f"{total_nights_2425:,}", fonts
 plt.text(total_nights_otd_2324 * 0.85, y = 0.8, s = f"{total_nights_otd_2324:,}", fontsize = 8, color = "#222222")
 
 # Plot the x
-plt.subplot(8,2,8)
+plt.subplot(9, 2, 8)
 plt.text(0.15, y = 0.45, s = f"{nights_percent}x", fontsize = 9)
 plt.yticks([])
 
 
 #################### NON MANAGED TOTAL ######################
 
-plt.subplot(8,2,9)
+plt.subplot(9, 2, 9)
 
 non_managed_2425 = accom_df \
     .query("""HN_Prop == 0 and Season == "'24/25'" """).ID.nunique()
@@ -254,14 +255,14 @@ plt.text(non_managed_2425 * 0.91, y = -0.2, s = f"{non_managed_2425}", fontsize 
 
 
 # Plot x factor
-plt.subplot(8,2,10)
+plt.subplot(9, 2, 10)
 plt.text(0.15, y = 0.45, s = f"{non_managed_perc}x", fontsize = 9)
 plt.yticks([])
 
 
 #################### NON MANAGED GROSS ######################
 
-plt.subplot(8,2,11)
+plt.subplot(9, 2, 11)
 
 non_managed_gross_2425 = accom_df \
     .query("""HN_Prop == 0 and Season == "'24/25'" """).Gross.sum()
@@ -291,7 +292,7 @@ plt.text(non_managed_gross_2425 * 0.88, y = -0.2, s = f"{nm_display_gross_2425}M
 
 
 
-plt.subplot(8,2,12)
+plt.subplot(9, 2, 12)
 plt.text(0.15, y = 0.45, s = f"{nm_gross_perc}x", fontsize = 9)
 plt.yticks([])
 
@@ -302,7 +303,7 @@ plt.yticks([])
 # Get the current month name
 current_month_name = datetime.datetime.now().strftime("%b")
 
-plt.subplot(8, 2, 13)
+plt.subplot(9, 2, 13)
 
 month_books_2425 = accom_df.query(f""" Season == "'24/25'" and \
                             `Booking Month` == {current_month}""").ID.nunique()
@@ -328,14 +329,14 @@ plt.text(month_books_2324 * 0.978, y = 1.2, s = f"{month_books_2324}", fontsize 
 
 
 # Plot the x factor
-plt.subplot(8,2,14)
+plt.subplot(9, 2, 14)
 plt.text(0.15, y = 0.45, s = f"{round(curr_month_perc,2)}x", fontsize = 9)
 plt.yticks([])
 
 
 ################### CURRENT MONTH GROSS ####################
 
-plt.subplot(8, 2, 15)
+plt.subplot(9, 2, 15)
 
 month_gross_2425 = accom_df.query(f""" Season == "'24/25'" and \
                             `Booking Month` == {current_month}""").Gross.sum()
@@ -368,14 +369,61 @@ plt.text(month_gross_2425 * 0.83, y = -0.15, s = f"{round(int(month_gross_2425)*
 plt.text(month_gross_2324 * 0.97 , y = 1.2, s = f"{round(int(month_gross_2324)*0.000001)}M", fontsize = 8, color = "#222222")
 
 
-plt.subplot(8,2,16)
+plt.subplot(9, 2, 16)
 plt.text(0.15, y = 0.45, s = f"{round(month_gross_perc,2)}x", fontsize = 9)
 plt.yticks([])
+
+################### GS BOOKS ####################
+
+plt.subplot(9, 2, 17)
+
+# gs_2324 = gs_df.query("")
+gs_2324_df = gs_df[gs_df.Season == "'23/24'"]
+gs_2324_df.Created = pd.to_datetime(gs_2324_df.Created)
+
+gs_total_2324 = gs_df.query("""Season == "'23/24'" """)\
+                            ["Item Sell Price"].sum()
+
+gs_total_2425 = gs_df.query("""Season == "'24/25'" """)\
+                            ["Item Sell Price"].sum()
+
+gs_otd_2324 = gs_2324_df[gs_2324_df.Created < today_date]\
+                            ["Item Sell Price"].sum()
+
+
+gs_percent = round(gs_total_2425/gs_otd_2324, 2)
+
+
+build_bullet(gs_total_2425,
+             gs_otd_2324,
+             gs_total_2324,
+             f"Guest Services ¥")
+
+gs_display_2324 = round(int(gs_total_2324) * 0.000001)
+gs_display_2425 = round(int(gs_total_2425) * 0.000001)
+gs_display_otd_2324 = round(int(gs_otd_2324) * 0.000001)
+
+plt.text(gs_otd_2324 * 0.6, y = 0.8, s = f"{gs_display_otd_2324}M", fontsize = 8)
+plt.text(gs_total_2425 * 0.7, y = -0.2, s = f"{gs_display_2425}M", fontsize = 9, color ="white")
+plt.text(gs_total_2324 * 0.95, y = 1.2, s = f"{gs_display_2324}M", fontsize = 8)
+
 
 ################ PLOT THE BULLETS ####################
 fig.subplots_adjust(wspace=0, hspace=0.4)
 
 with row0[1]: st.pyplot(fig)
+
+
+
+
+
+##################################################################################
+
+
+
+
+
+
 
 
 ########### PLOT THE SPARKS  #####################
@@ -724,18 +772,18 @@ fig_rates.subplots_adjust(wspace=0, hspace=0.5)
 with row0[0]:
     st.pyplot(fig_rates)
 
-plot_enqs = enq_2425.groupby("Stay Period")["Stay Period"].count().reset_index(name="THING")
-plot_enqs = plot_enqs[plot_enqs["Stay Period"] != "0"]
+# plot_enqs = total_enq_2425.groupby("Stay Period")["Stay Period"].count().reset_index(name="THING")
+# plot_enqs = plot_enqs[plot_enqs["Stay Period"] != "0"]
 
 
-plot_enqs["Stay Period"] = pd.Categorical(plot_enqs["Stay Period"], 
-                                        ["Early Dec", "Late Dec",
-                                         "Early Jan", "Late Jan",
-                                         "Early Feb", "Late Feb",
-                                         "Early Mar", "Late Mar"])
+# plot_enqs["Stay Period"] = pd.Categorical(plot_enqs["Stay Period"], 
+#                                         ["Early Dec", "Late Dec",
+#                                          "Early Jan", "Late Jan",
+#                                          "Early Feb", "Late Feb",
+#                                          "Early Mar", "Late Mar"])
 
-plot_enqs.sort_values(by = "Stay Period", inplace=True)
+# plot_enqs.sort_values(by = "Stay Period", inplace=True)
 
 
-fig_sns = plt.figure(figsize=(10, 4))
+# fig_sns = plt.figure(figsize=(10, 4))
 

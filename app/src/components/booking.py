@@ -40,6 +40,7 @@ class Booking:
         
         self.get_hn_props()
 
+
         # 1 Get the dictionaries
         # check API type
         if api_type == "listBooking":
@@ -137,6 +138,16 @@ class Booking:
 
             if booking.get("bookingType") == "ACCOMMODATION":
                 
+                # Get the correct eId for the booking
+                try:
+
+                    self.eId = self.json_response.get("order", {})\
+                        .get("bookings", {})[0].get("eId")
+
+                    
+                except Exception as e:
+                    st.write(e)
+
                 self.parse_accom_item(booking)
     
             elif booking.get("bookingType") == "SERVICE":
@@ -151,7 +162,7 @@ class Booking:
         room dictionary 
         """
 
-        self.eId = booking.get("eId", {None})
+        # self.eId = booking.get("eId", {None})
         self.active_check = booking.get("active")
         self.booking_id = booking.get("bookingId")
         self.booking_source = booking.get("bookingSource", {})
@@ -244,7 +255,7 @@ class Booking:
         """Parse each guest service booking"""
 
         active = booking.get("active", {})
-        self.eId  = booking.get("eId", {})
+        # self.eId  = booking.get("eId", {}) # need to add back in for GS table
         extent = booking.get("extent", {})
         guest_service_id = booking.get("bookingId")
         service_id = booking.get("eId", {})
@@ -355,7 +366,7 @@ class Booking:
             payment_info_df["Date Created"] = pd.to_datetime(payment_info_df["Date Created"])
             payment_info_df["Due Date"] = pd.to_datetime(payment_info_df["Due Date"])
 
-            payment_info_df["Date Paid  "] = pd.to_datetime(payment_info_df["Date Paid"], errors="coerce")
+            payment_info_df["Date Paid"] = pd.to_datetime(payment_info_df["Date Paid"], errors="coerce")
 
 
             st.markdown(self.payment_info_df.style.hide(axis="index")
