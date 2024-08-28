@@ -60,11 +60,13 @@ if user_input:
         with row1[1]: bk.write_payment_info()
         with row1[2]: bk.write_room_info(bk.room_dict)
         with row1[2]: bk.write_email_subject()
+
         
         with divider[0]: st.write("---")
         
         # write email templates 
         with row2[0]: bk.write_gsg_upsell()
+        with row2[0]: bk.write_OTA_email()
 
     
 

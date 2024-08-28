@@ -29,9 +29,9 @@ st.set_page_config(page_title = "Sales Dashboard",
                    layout="wide")
 
 # Set up columns
-row0 = st.columns(2 )
-row1 = st.columns(3)
-row2 = st.columns(3)
+row0 = st.columns(2)
+row1 = st.columns(2)
+row2 = st.columns(2)
 
 current_month = datetime.datetime.today().month
 
@@ -76,7 +76,7 @@ fig,  (ax0, ax1, ax2, ax3,
        ax4, ax5, ax6, ax7,
        ax8) = plt.subplots(9, 2,
                            width_ratios=[10, 0.8],
-                           figsize = (8,5.2))
+                           figsize = (10,5))
 
 for x,y in enumerate(fig.axes):
 
@@ -92,11 +92,14 @@ for x,y in enumerate(fig.axes):
 
 
     fig.axes[x].get_xaxis().set_visible(False)
+
 # Activates first plot
 plt.subplot(9,2,1)
 
 
 ############## Web Enquiries #################
+
+# def enquiries_bullet():
 
 today_str = "2023" + datetime.datetime.today().strftime('%Y-%m-%d')[4:]
 today_date = pd.to_datetime(today_str)
@@ -118,7 +121,8 @@ build_bullet(total_enq_2425,
              "Web Enquiries")
 
 # Annotations
-plt.text(total_enq_2425 - 55, y = -0.15, s = f"{total_enq_2425}", fontsize = 9, color = "white")
+plt.text(total_enq_2425 - 55,
+         y = -0.15, s = f"{total_enq_2425}", fontsize = 9, color = "white")
 plt.text(total_enq_2324 - 35, y = 1.2, s = f"{total_enq_2324:,}", fontsize = 8, color = "#222222")
 plt.text(total_enq_otd_2324 - 50, y = 0.8, s = f"{total_enq_otd_2324}", fontsize = 8, color = "#222222")
 
@@ -128,7 +132,6 @@ plt.figtext(0.75, 0.92,
              color = "#222222",
              fontsize = 12)
 
-# plt.yticks([0.5], ["Web Enquiries"]) # Title
 
 fig.axes[0].set_title(f"2024 Total vs {today_date.strftime('%b %d %Y')}",
                        fontdict = {"fontsize": 12},
@@ -278,7 +281,7 @@ nm_gross_perc = round(non_managed_gross_2425/otd_non_managed_gross_2324, 2)
 build_bullet(non_managed_gross_2425,
              otd_non_managed_gross_2324,
              non_managed_gross_2324,
-             "Non-managed Gross ¥")
+             "NM Gross ¥")
 
 
 nm_display_gross_2324 = round(int(non_managed_gross_2324)*0.000001)
@@ -397,7 +400,7 @@ gs_percent = round(gs_total_2425/gs_otd_2324, 2)
 build_bullet(gs_total_2425,
              gs_otd_2324,
              gs_total_2324,
-             f"Guest Services ¥")
+             f"Non-accom ¥")
 
 gs_display_2324 = round(int(gs_total_2324) * 0.000001)
 gs_display_2425 = round(int(gs_total_2425) * 0.000001)
@@ -409,9 +412,10 @@ plt.text(gs_total_2324 * 0.95, y = 1.2, s = f"{gs_display_2324}M", fontsize = 8)
 
 
 ################ PLOT THE BULLETS ####################
+plt.tight_layout()
 fig.subplots_adjust(wspace=0, hspace=0.4)
 
-with row0[1]: st.pyplot(fig)
+with row0[0]: st.pyplot(fig)
 
 
 
@@ -433,7 +437,7 @@ with row0[1]: st.pyplot(fig)
 fig_rates,  (ax0, ax1, ax2, ax3) = plt.subplots(4, 2,
                                      width_ratios=[10, 1],
                                      sharex = True,
-                                     figsize = (8,6))
+                                     figsize = (10, 5))
 
 
 
@@ -609,6 +613,7 @@ fig_rates.get_axes()[0].set_yticks([])
 
 ######################### MailChimp Opening Rate   ###################
 
+
 plt.subplot(4, 2, 5)
 plt.ylim([0.25,0.45])
 
@@ -651,7 +656,7 @@ plt.text(x = pd.to_datetime("2023-12-26"),
 
 plt.text(x = mc_df_24["Send Time"].values[-1] + pd.offsets.DateOffset(days=3),
          y = mc_df_24["Open Rate"].values[-1] + 0.01,
-         s = f"{round(mc_df_24['Open Rate'].values[-1], 3)*100}%",
+         s = f"{round(mc_df_24['Open Rate'].values[-1], 2)*100}%",
          fontsize = 7,
          color='#4571c4')
 
@@ -769,21 +774,130 @@ fig_rates.subplots_adjust(wspace=0, hspace=0.5)
 
 
 
-with row0[0]:
+with row0[1]:
     st.pyplot(fig_rates)
 
-# plot_enqs = total_enq_2425.groupby("Stay Period")["Stay Period"].count().reset_index(name="THING")
-# plot_enqs = plot_enqs[plot_enqs["Stay Period"] != "0"]
 
 
-# plot_enqs["Stay Period"] = pd.Categorical(plot_enqs["Stay Period"], 
-#                                         ["Early Dec", "Late Dec",
-#                                          "Early Jan", "Late Jan",
-#                                          "Early Feb", "Late Feb",
-#                                          "Early Mar", "Late Mar"])
 
-# plot_enqs.sort_values(by = "Stay Period", inplace=True)
+####################### HALF MONTH SPLITS #######################
+with row1[0]: st.write("---")
+
+def graph_half_months():
+
+    # fig & ax setup
+    fig_half_months, (ax0, ax1, ax2, ax3,
+                      ax4, ax5, ax6, ax7) = plt.subplots(8, 2,
+                                            width_ratios=[10, 0.8],
+                                            figsize = (10,5))
+
+    for x, y in enumerate(fig_half_months.axes):
+
+        fig_half_months.axes[x].tick_params(top=False,
+                bottom=False,
+                left=False,
+                right=False,
+                labelleft=True,
+                labelbottom=False)
+        
+        fig_half_months.axes[x].spines[["top", "left", ]].set_visible(False)
+        fig_half_months.axes[x].spines[["bottom", "right"]].set_color('#D4D4D4')
+
+    # Finish setup
 
 
-# fig_sns = plt.figure(figsize=(10, 4))
+    # Get 1/2 month names
+    half_months = accom_df["Half Month"].unique().tolist()[2:]
+
+
+    # Reorder the list
+    my_order = [0,1,2,3,5,4,6,7]
+    half_month_ordered = [half_months[i] for i in my_order]
+
+    count = 0
+
+    for period in half_month_ordered:
+
+        count += 1
+        plt.subplot(8, 2, count)
+
+        period_otd_2324 = otd_df.query(f"""Season =="'23/24'" and \
+                                    `Half Month` == '{period}'""").Count.sum() 
+
+        period_2324 = accom_df.query(f"""Season =="'23/24'" and \
+                                    `Half Month` == '{period}'""").Count.sum() 
+
+        period_2425 = accom_df.query(f"""Season =="'24/25'" and \
+                                    `Half Month` == '{period}'""").Count.sum() 
+        
+        period_percent_x = round(period_2425/period_otd_2324, 2)
+        
+        build_bullet(period_2425,
+                    period_otd_2324,
+                    period_2324,
+                    f"{period}")
+        
+
+        plt.text(period_otd_2324 - 5,
+                y = 0.7, 
+                s = f"{period_otd_2324}", 
+                fontsize = 8)
+        
+        plt.text(period_2324 * 0.985,
+                y = 1.1, 
+                s = f"{period_2324}", 
+                fontsize = 8)
+        
+        plt.text(period_2425 * 0.88, 
+                y = -0.25, 
+                s = f"{period_2425}", 
+                fontsize = 9, 
+                color = "white")
+
+
+        
+        count += 1
+        
+        plt.subplot(8, 2, count)
+
+        # plt.subplot(9,2,4)
+        plt.text(0.15, y = 0.45, s = f"{period_percent_x}x", fontsize = 9)
+        plt.yticks([])
+        
+
+    fig_half_months.subplots_adjust(wspace=0, hspace=0.4)
+    fig_half_months.axes[0].set_title(f"2024 Check-ins vs {today_date.strftime('%b %d %Y')}",
+                        fontdict = {"fontsize": 12},
+                        loc= "left",
+                        pad = 20)
+
+    left = 0.05
+    bottom = 0.0 
+    width = 0.0
+    height = 0.0
+
+    ax0 = fig_half_months.add_axes([left, bottom, width, height])
+    with row2[0]: st.pyplot(fig_half_months)
+
+    pass
+
+graph_half_months()
+
+#####################  Channels ####################
+
+channel_fig = plt.figure(figsize=(10, 4))
+
+
+accom_df_2425 = accom_df.query(""" Season =="'24/25'" """)
+
+channels = accom_df_2425.ChannelAS2.unique().tolist()
+st.write(channels)
+
+sns.barplot(x = "ChannelAS2",
+            y = "Count",
+            hue = "ChannelAS2",
+            data = accom_df_2425,
+            estimator = sum) 
+
+with row2[1]: st.pyplot(channel_fig)
 

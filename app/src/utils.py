@@ -12,6 +12,138 @@ import streamlit as st
 from dotenv import load_dotenv
 from pathlib import Path
 
+
+def plot_setup(rows, cols):
+
+    fig, ax = plt.subplots(rows, cols,
+                           width_ratios=[9, 1],
+                           figsize = (4,1.75))
+    plt.subplot(rows,cols,1)
+
+    for x in range(0,6,2):
+        
+        # Horizontal bars
+        fig.axes[x].tick_params(
+                            top=False,
+                            bottom=True,
+                            left=False,
+                            right=False,
+                            labelleft=False,
+                            labelbottom=True,
+                            labelsize = 4,
+                            color = "#D4D4D4",
+                            labelcolor = "#4C4646",
+                            length = 1,
+                            pad = 1)
+        
+        fig.axes[x].spines[["top", "left", "right"]].set_visible(False)
+        fig.axes[x].spines[["bottom", ]].set_color('#D4D4D4')
+
+        
+        # Numbers subplot formatting
+        fig.axes[x+1].tick_params(
+                            top=False,
+                            bottom=False,
+                            left=False,
+                            right=False,
+                            labelleft=False,
+                            labelbottom=False,
+                            labelsize = 4,
+                            color = "#D4D4D4",
+                            )
+        
+        fig.axes[x+1].spines[["top", "left", "right"]].set_visible(False)
+        fig.axes[x+1].spines[["bottom", ]].set_color('#D4D4D4')
+
+    fig.subplots_adjust(wspace=0.05, hspace=0.3)
+    fig.axes[0].xaxis.set_major_formatter(formatter)
+
+    return fig, ax
+
+
+def formatter(x, pos):
+    return f"¥{int(round(x / 1e6, 0))}M"
+
+def plot_xfactors(fig_dict):
+        count = 2    
+        for k in fig_dict.keys():
+            
+            plt.subplot(3,2,count)
+
+            plt.annotate(
+                f"{round(fig_dict[k][0]/fig_dict[k][1], 2)}x",
+                (0.2, 0.35),
+                fontsize = 5,
+                color = "#4C4646")
+            count += 2
+
+def format_millions(figure):
+
+    """Format millions for graphing"""
+
+    if figure > 1000000:
+
+        return f"¥{figure * 0.000001:.0f}M"
+    
+    else:
+        return figure
+    
+
+def build_hbars(axis, figures_list, title: str):
+
+    """Plot hbars for dashboard 2"""
+
+    # 23 first
+    axis.barh(
+        y = [0.8],
+        width = figures_list[1],
+        color = "#DEDEDE", 
+        height = 0.8,
+        )
+    
+    axis.barh(
+            y = [0],
+            width = figures_list[0], # width of the bar from left position below
+            left = [0],
+            color = "#4571c4",
+            height = 0.8
+            )
+    
+    axis.set_ylabel(title,
+                    rotation = 0,
+                    labelpad = 20,
+                    fontsize = 6)
+    axis.yaxis.set_label_coords(-0.1,0.30)
+
+    axis.vlines(x = figures_list[2],
+        ymin = -0.2,
+        ymax = 0.8,
+        color = "#bbbbbb",
+        linewidth = 1.5)
+    
+
+    # for idx, figure in enumerate(figures_list):
+
+    #     if idx == 0:
+
+    #         axis.annotate(
+    #             format_millions(figure),
+    #             (figures_list[idx], -0.1),
+    #             fontsize = 3,
+    #             color = "#4C4646")
+                
+    #     elif idx == 1:
+
+    #         axis.annotate(
+    #             format_millions(figure),
+    #             (figures_list[idx], 0.7),
+    #             fontsize = 3,
+    #             color = "#4C4646") 
+
+    pass
+    
+
+
 def build_bullet(total_2425, otd_2324, total_2324, title: str):
 
     """Plot bullet/bar charts for dashboard"""
@@ -66,8 +198,6 @@ def month_splits_2324(df,column, season):
     df["Stay Period"] = np.where(df[column].between(f"20{second}-03-15",f"20{second}-03-31"),"Late Mar",df["Stay Period"])  
 
     return df
-
-
 
 def create_otd_df(df, metric):
 

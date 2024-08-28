@@ -387,11 +387,14 @@ class Booking:
 
         """Write the guest service upsell spiel"""
   
-        if self.guest_email == None:
-            st.markdown("No email")        
+        if self.guest_email == "":
+            pass   
 
         else:
-            st.write(f"""
+            
+            gs_upsell_expander = st.expander("GS Upsell", expanded = False)
+            with gs_upsell_expander:
+                st.write(f"""
                     **Enhance Your Stay with Guest Services**  
                        
                     Make your Niseko trip even better! 
@@ -416,6 +419,49 @@ class Booking:
         pass
 
 
+    def write_OTA_email(self):
+
+        """Write the OTA email after they contact us"""
+  
+        if self.guest_email == "":
+            pass        
+
+        else:
+            
+            ota_email_expander = st.expander("OTA Email", expanded = False)
+            with ota_email_expander:
+                st.write(f"""
+                    
+                    Hi {self.given_name},  
+
+                    Thank you for getting back to us. We have linked your email and you can now book private transfers, rentals and more!
+
+                    <a href='{self.gsg_link}'> Book your guest services</a>  
+
+                    View your booking details and make payments for guest services here:  
+                    <a href='{self.payment_link}'> View booking details</a>  
+
+                    For a full range of services, see our <a href='{self.service_guide}'> Guest Services Guide</a>.
+
+                    What's Next? Our front desk team will contact you closer to your check-in date with:
+
+                    - Arrival instructions
+                    - Online check-in link
+                    - Guest registration forms  \n
+
+                      \n\n    
+
+                    We look forward to welcoming you to Niseko soon!
+                     
+                     
+                    """,
+                          unsafe_allow_html = True)
+
+        # st.markdown("<p class='big-font'> You can make payment and check the details of your booking [here.](%s)" % pay_str)
+
+        pass
+
+
     def write_key_booking_info(self):
 
         """Writes key info to left col app"""
@@ -427,21 +473,25 @@ class Booking:
         st.write(f"{self.managed_by} Property")
 
         if self.active_check == True:
-            st.write(f"Booking is **:green[Active]**")
+            st.write(f"**:green[Booking is Active]**")
         else:
-            st.write(f"Booking is :red[Cancelled]")
-
-        st.write(self.guest_email)
-
+            st.write(f":red[Booking is Cancelled]")
 
         st.markdown(f"[Open #{self.eId} in RoomBoss](%s)" % self.rboss_launch)
 
 
+        if ("booking.com" not in self.guest_email) \
+            & (self.guest_email != ""):
+            st.write(self.guest_email)
 
-        if (self.guest_email != None) & (self.eId != None):
-            st.markdown(f"[Payment Link](%s)" % self.payment_link)
+            if (self.guest_email != None) & (self.eId != None):
+                st.markdown(f"[Payment Link](%s)" % self.payment_link)
 
-        st.markdown(f"[GSG Link #{self.eId}](%s)" % self.gsg_link)
+                st.markdown(f"[GSG Link #{self.eId}](%s)" % self.gsg_link)
+
+        else:
+            st.write(f":red[Need to get guest email]")
+        
 
 
     def write_email_subject(self):
@@ -505,7 +555,7 @@ class Booking:
         self.accom_checkin = booking_df["Check-in"].min()
         self.accom_checkout = booking_df["Check-out"].max()
 
-        st.write(f"ACCOM CHECKIN {self.accom_checkin}")
+
         st.markdown(booking_df.style.hide(axis="index")\
             .set_table_styles([{'selector': 'th', 
                                 'props': [('font-size',
