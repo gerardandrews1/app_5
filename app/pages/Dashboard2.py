@@ -1,4 +1,4 @@
-# Dashboard for high level business metrics.
+# Monthly Dashboard for high level business metrics.
 # TODO want to figure out a better way to build db
 # perhaps a loop, but difficult to include metrics
 
@@ -27,11 +27,27 @@ from src.utils import plot_xfactors
 from src.utils import formatter
 from src.utils import plot_setup
 from src.utils import format_millions
+from src.utils import add_bar_labels
+from src.utils import single_hbar_setup
+from src.utils import single_hbar_labels
 
 # Page and variable setup
-st.set_page_config(page_title = "Sales Dashboard",
-                   layout="wide")
+st.set_page_config(page_title = "Monthly Sales Dashboard",
+                   layout="wide",
+                   )
 
+
+month_list = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+current_month = st.sidebar.multiselect(
+    "Filter by month",
+    options= month_list,
+    default=8     
+    )
+
+# Get current month
+current_month_name = datetime.date(2024, current_month[0], 1).strftime("%B")
+# current_month = datetime.datetime.today().month
+today_str = datetime.datetime.today().strftime('%b %d')
 
 
 # Set up columns
@@ -39,12 +55,12 @@ row0 = st.columns(3)
 row1 = st.columns(3)
 row2 = st.columns(3)
 
-current_month = datetime.datetime.today().month
+# current_month = datetime.datetime.today().month
 
 # TODO add more data sources and connect to analytics API
 
 raw_df = load_csv_data("../../Downloads/Bookings Clean.csv")
-accom_df = clean_accom_df(raw_df)
+accom_df = clean_accom_df(raw_df, "Start date")
 
 otd_df = create_otd_df(accom_df, "Gross")
 
@@ -56,7 +72,7 @@ enq_df = load_csv_data("../../Downloads/Enquiries Clean.csv")
 enq_df["Enquiry Date"] = pd.to_datetime(enq_df["Enquiry Date"])
 enq_df["Count"] = 1
 
-enq_df = enq_df[["Enquiry Date", "Email", "Property",
+enq_df = enq_df[["Enquiry Date", "Email", "Property", "Enquiry Month",
                 "Check In", "Check Out", "Nights", "Adults",
                 "Bedrooms", "Country", "Season", "Count"]]
 
@@ -76,10 +92,10 @@ ga_2024.Date = pd.to_datetime(ga_2024.Date)
 ga_2023.Date = pd.to_datetime(ga_2023.Date)
 
 
-# Get current month
-current_month_name = datetime.datetime.now().strftime("%b")
-current_month = datetime.datetime.today().month
-today_str = datetime.datetime.today().strftime('%b %d')
+# # Get current month
+# current_month_name = datetime.datetime.now().strftime("%b")
+# # current_month = datetime.datetime.today().month
+# today_str = datetime.datetime.today().strftime('%b %d')
 
 
 # Store queries for use later on
@@ -105,7 +121,7 @@ def season_bullets(fig, ax):
     """Make the season hbars not bullets"""
 
     # Set a nice title
-    ax[0][0].set_title(f"23/24 & 24/25 Totals", 
+    ax[0][0].set_title(f"23/24 and 24/25 Totals", 
                         fontsize = 7,
                         loc = "left",
                         )
@@ -145,13 +161,19 @@ def season_bullets(fig, ax):
         build_hbars(ax[ax_count][0],
                     y,
                     x)
-
+        
+        add_bar_labels(ax[ax_count][0], y[2])
         count += 1
         ax_count += 1
 
 
     # Plot the x factors
-    plot_xfactors(season_dict)
+    plot_xfactors(season_dict, 3, 2)
+
+    # Add bar labels
+    
+
+
 
     pass
 
@@ -202,13 +224,17 @@ def monthly_bullets(fig, ax):
         build_hbars(ax[ax_count][0],
                     y,
                     x)
+        
+        add_bar_labels(ax[ax_count][0], y[2])
 
         count += 1
         ax_count += 1
 
-
+    # Add bar labels
+    # add_bar_labels(ax)
+    plt.margins(x=0)
     # Plot the x factors
-    plot_xfactors(month_dict)
+    plot_xfactors(month_dict, 3, 2)
 
 
     pass
@@ -216,8 +242,9 @@ def monthly_bullets(fig, ax):
 
 def monthly_channel():
 
-    fig = plt.figure(figsize = (10,4))
+    
 
+    fig, ax = single_hbar_setup(f"{current_month_name} Sales Channel")
 
 
 
@@ -227,38 +254,224 @@ def monthly_channel():
         .sum() \
         .reset_index()
     
-    channel_gross = channel_gross.sort_values(['Gross'], ascending = False).reset_index(drop=True)
-
-    ax = sns.barplot(
-            data = channel_gross, 
-            x = 'ChannelAS2',
-            y = 'Gross',
-            palette = ["#D4D4D4"])
+    channel_gross = channel_gross.sort_values(['Gross'], ascending = True).reset_index(drop=True)
+    channel_gross = channel_gross[channel_gross["ChannelAS2"] != "308828553"]
+    
+    ax.barh(channel_gross["ChannelAS2"], 
+            channel_gross["Gross"],
+             color = "#4571c4",
+              height = 0.75 )
+    # ax = sns.barplot(
+    #         data = channel_gross, 
+    #         y = 'ChannelAS2',
+    #         x = 'Gross',
+    #         width = 0.70,
+    #         palette = ["#4571c4"],
+    #         orient = "h")
 
     for i in ax.containers:
         ax.bar_label(i,
                      fmt = format_millions,
-                     color = "#4C4646")
+                     color = "#4C4646",
+                     size = 6.5)
         
-    fig.axes[0].set_xlabel("")
-    fig.axes[0].set_ylabel("")
 
-    fig.axes[0].spines[["top", "left", "right", "bottom"]].set_visible(False)
-    fig.axes[0].yaxis.set_major_formatter(formatter)
-    fig.axes[0].tick_params(
-                                top=False,
-                                bottom=True,
-                                left=False,
-                                right=False,
-                                labelleft=False,
-                                labelbottom=True,
-                                labelsize = 10,
-                                color = "#D4D4D4",
-                                labelcolor = "#4C4646",
-                                length = 1,
-                                pad = 1)
+    
 
     return fig
+
+
+def monthly_bk_rate():
+
+
+    fig_bkrates, ax =  plt.subplots(
+                                    # width_ratios=[10, 1],
+                                    sharex = True,
+                                    figsize = (6, 2.5))
+
+    weekly_df = accom_df.query(f"""Season =="'24/25'" and \
+                               (`Booking Month` == {current_month} \
+                               and `Booking Month` < 12) \
+                               and `Booking Year` == 2024 """) \
+                        .groupby(["Season", 
+                                  pd.Grouper(key = "Created",
+                                             freq="D")])["ID"] \
+                        .nunique() \
+                        .reset_index() \
+                        .sort_values("Created")
+    plt.bar(weekly_df["Created"],
+         weekly_df.ID,
+         color = '#DEDEDE', 
+         )
+    month_day_fmt = mdates.DateFormatter('%d') # 
+    month_ticks = mdates.MonthLocator()
+    ax.get_xaxis().set_major_formatter(month_day_fmt)    
+    # ax.get_xaxis().set_major_locator(month_ticks) 
+
+    # st.write(weekly_df)
+    ax.tick_params(
+                top=False,
+                bottom=True,
+                left=False,
+                right=False,
+                labelleft=False,
+                labelbottom=True,
+                labelsize = 6,
+                color = "#D4D4D4",
+                labelcolor = "#4C4646",
+                length = 1,
+                pad = 1)
+    
+    ax.spines[["top", "left", "right", "bottom"]].set_visible(False)
+    ax.set_title(f" {current_month_name} Bookings per day",
+                 size = 9,
+                 loc = "left")
+
+    for i in ax.containers:
+        ax.bar_label(i,
+                     fmt = int,
+                     color = "#4C4646",
+                     size = 5)
+
+
+    return fig_bkrates
+
+def monthly_enq_rate():
+
+    fig_enqrates, ax =  plt.subplots(
+                                    # width_ratios=[10, 1],
+                                    sharex = True,
+                                    figsize = (6, 2.5))
+    st.write(enq_df.columns)
+    weekly_enq_2425 = enq_df.query(f"""`Enquiry Date` > '2023-12-01' and \
+                               Season == "'24/25'" and \
+                               `Enquiry Month` == {current_month}""") \
+                .groupby(["Season", pd.Grouper(key = "Enquiry Date", freq = "D")])["Email"] \
+                .nunique() \
+                .reset_index() \
+                .sort_values("Enquiry Date")
+    
+    plt.bar(weekly_enq_2425["Enquiry Date"],
+         weekly_enq_2425.Email,
+         color = '#DEDEDE', 
+         )
+    
+    month_day_fmt = mdates.DateFormatter('%d') # 
+    month_ticks = mdates.MonthLocator()
+    ax.get_xaxis().set_major_formatter(month_day_fmt)    
+    # ax.get_xaxis().set_major_locator(month_ticks) 
+
+    # st.write(weekly_df)
+    ax.tick_params(
+                top=False,
+                bottom=True,
+                left=False,
+                right=False,
+                labelleft=False,
+                labelbottom=True,
+                labelsize = 6,
+                color = "#D4D4D4",
+                labelcolor = "#4C4646",
+                length = 1,
+                pad = 1
+                )
+    
+    ax.spines[["top", "left", "right", "bottom"]].set_visible(False)
+    ax.set_title(f" {current_month_name} Enquiries per day",
+                 size = 9,
+                 loc = "left")
+
+    for i in ax.containers:
+        ax.bar_label(i,
+                     fmt = int,
+                     color = "#4C4646",
+                     size = 5)
+
+
+    return fig_enqrates
+
+def man_nonman():
+    
+    fig, ax = plt.subplots(
+                # width_ratios=[10, 1],
+                sharex = True,
+                figsize = (6, 2.5))
+    
+    
+    management_df = accom_df.query(f"""Season == "'24/25'" and \
+                                   `Booking Month` == {current_month} """)\
+                                   [["ID", "HN_Prop","Gross", "Count"]].drop_duplicates()
+
+    management_gb = management_df\
+                    .groupby("HN_Prop")["Gross","Count"]\
+                    .sum()\
+                    .reset_index()
+    
+    management_gb["HN_Prop"] = management_gb["HN_Prop"].replace(0, "Non-managed")  
+    management_gb["HN_Prop"] = management_gb["HN_Prop"].replace(1, "Managed")  
+
+    plt.bar(management_gb["HN_Prop"],
+            management_gb["Gross"],
+            width = 0.2,
+            align = "center")
+    
+    # st.write(weekly_df)
+    ax.tick_params(
+                top=False,
+                bottom=True,
+                left=False,
+                right=False,
+                labelleft=False,
+                labelbottom=True,
+                labelsize = 6,
+                color = "#D4D4D4",
+                labelcolor = "#4C4646",
+                length = 1,
+                pad = 1)
+    
+    ax.spines[["top", "left", "right", "bottom"]].set_visible(False)
+    ax.set_title(f"Managed and Non-managed",
+                 size = 8,
+                 loc = "left")
+    
+    plt.xlim(-0.9,1.9)
+
+    single_hbar_labels(ax)
+
+    return fig
+
+
+
+
+    plt.subplots()
+
+
+def non_managed_channel():
+
+    fig, ax = single_hbar_setup(f"{current_month_name} Non-managed Gross")
+
+
+    non_managed_df = accom_df.query(f"""HN_Prop == 0 &\
+                                    Season == "'24/25'" &\
+                                    `Booking Month` == {current_month}""")
+    non_managed = non_managed_df.groupby(["Managed by"])["Gross"]\
+                                .sum()\
+                                .reset_index()
+
+    non_managed = non_managed.sort_values(['Gross'], ascending = True)
+        
+    ax.barh(non_managed["Managed by"], 
+            non_managed["Gross"],
+            color = "#4571c4",
+            )
+
+    
+    single_hbar_labels(ax)
+    
+    return fig
+    
+
+nm_fig = non_managed_channel()
 
 monthly_fig, month_ax = plot_setup(3,2)
 monthly_bullets(monthly_fig, month_ax)
@@ -272,3 +485,10 @@ with row0[0]: st.pyplot(season_fig)
 
 with row2[0]: st.pyplot(month_channel)
                                    
+bk_rate = monthly_bk_rate()
+enq_rate = monthly_enq_rate()
+man_fig = man_nonman()
+with row0[1]: st.pyplot(bk_rate)
+with row1[1]: st.pyplot(enq_rate)
+with row1[2]: st.pyplot(man_fig)
+with row2[2]: st.pyplot(nm_fig)

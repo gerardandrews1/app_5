@@ -13,14 +13,76 @@ from dotenv import load_dotenv
 from pathlib import Path
 
 
+def single_hbar_setup(title: str):
+
+    """Setup the hbars for breakdowns"""
+    
+    fig, ax = plt.subplots(figsize = (4,2.5))
+    ax.set_xlabel("")
+    ax.set_ylabel("")
+    ax.set_title(title,
+                size = 8,
+                loc = "left")
+    
+    
+    fig.axes[0].spines[["top", "left", "right", "bottom"]].set_visible(False)
+    fig.axes[0].xaxis.set_major_formatter(formatter)
+    fig.axes[0].tick_params(
+                                top=False,
+                                bottom=True,
+                                left=True,
+                                right=False,
+                                labelleft=True,
+                                labelbottom=False,
+                                labelsize = 6,
+                                color = "#D4D4D4",
+                                labelcolor = "#4C4646",
+                                length = 1,
+                                pad = 1)
+    
+    plt.subplots_adjust(left=-0.04)
+
+    return fig, ax
+    
+def single_hbar_labels(ax):
+
+    """Add bar labels to single hbars"""
+    for i in ax.containers:
+        ax.bar_label(
+                    i,
+                    fmt = format_millions,
+                    color = "#4C4646",
+                    size = 6.5)
+        
+    pass
+
+def add_bar_labels(ax, total_23):# Add bar labels
+    
+    # Add labels to bar on graph
+    # for axis in ax:
+    #     for sub_axis in axis:
+    for i in ax.containers:
+        ax.bar_label(
+            i,
+            fmt = format_millions,
+            color = "#242124",
+            size = 6)
+        # Add 23 total
+
+        # formatted_total = format_millions(total_23)
+        ax.set_xticks([total_23],
+                      labels = [format_millions(total_23)]
+                      )
+    pass
+
 def plot_setup(rows, cols):
 
     fig, ax = plt.subplots(rows, cols,
-                           width_ratios=[9, 1],
-                           figsize = (4,1.75))
+                           width_ratios=[9, 1.3],
+                           figsize = (6,2.5))
     plt.subplot(rows,cols,1)
 
-    for x in range(0,6,2):
+    for x in range(0,rows*cols,2):
         
         # Horizontal bars
         fig.axes[x].tick_params(
@@ -30,8 +92,8 @@ def plot_setup(rows, cols):
                             right=False,
                             labelleft=False,
                             labelbottom=True,
-                            labelsize = 4,
-                            color = "#D4D4D4",
+                            labelsize = 6,
+                            color = "#4C4646",
                             labelcolor = "#4C4646",
                             length = 1,
                             pad = 1)
@@ -48,7 +110,7 @@ def plot_setup(rows, cols):
                             right=False,
                             labelleft=False,
                             labelbottom=False,
-                            labelsize = 4,
+                            labelsize = 6,
                             color = "#D4D4D4",
                             )
         
@@ -58,22 +120,23 @@ def plot_setup(rows, cols):
     fig.subplots_adjust(wspace=0.05, hspace=0.3)
     fig.axes[0].xaxis.set_major_formatter(formatter)
 
+    
     return fig, ax
 
 
 def formatter(x, pos):
     return f"¥{int(round(x / 1e6, 0))}M"
 
-def plot_xfactors(fig_dict):
+def plot_xfactors(fig_dict, rows, cols):
         count = 2    
         for k in fig_dict.keys():
             
-            plt.subplot(3,2,count)
+            plt.subplot(rows,cols,count)
 
             plt.annotate(
                 f"{round(fig_dict[k][0]/fig_dict[k][1], 2)}x",
                 (0.2, 0.35),
-                fontsize = 5,
+                fontsize = 7,
                 color = "#4C4646")
             count += 2
 
@@ -85,8 +148,11 @@ def format_millions(figure):
 
         return f"¥{figure * 0.000001:.0f}M"
     
+    elif figure > 15000:
+        return f"¥{figure:,.0f}"
+
     else:
-        return figure
+        return f"{figure:,.0f}"
     
 
 def build_hbars(axis, figures_list, title: str):
@@ -106,20 +172,21 @@ def build_hbars(axis, figures_list, title: str):
             width = figures_list[0], # width of the bar from left position below
             left = [0],
             color = "#4571c4",
-            height = 0.8
+            height = 0.8,
             )
     
     axis.set_ylabel(title,
                     rotation = 0,
                     labelpad = 20,
-                    fontsize = 6)
-    axis.yaxis.set_label_coords(-0.1,0.30)
+                    fontsize = 8,
+                    color = "#4C4646")
+    # axis.yaxis.set_label_coords(-0.08,0.30)
 
     axis.vlines(x = figures_list[2],
         ymin = -0.2,
         ymax = 0.8,
-        color = "#bbbbbb",
-        linewidth = 1.5)
+        color = "#DEDEDE",
+        linewidth = 1)
     
 
     # for idx, figure in enumerate(figures_list):
@@ -214,7 +281,7 @@ def create_otd_df(df, metric):
 
         today_date = pd.to_datetime(today_str)
 
-        today_df = today_df[today_df.Created < today_date]
+        today_df = today_df[today_df.Created <= today_date]
 
 
         # today_gb = today_df.groupby("Season")[metric].sum().reset_index().sort_values(by = "Season",ascending = True)
@@ -300,7 +367,7 @@ def load_csv_data(path: str):
     return df
 
 
-def clean_accom_df(accom_df, remove_zero=True):
+def clean_accom_df(accom_df, month_split_column, remove_zero = True):
 
     # Remove owner stays
     if remove_zero ==  True:
@@ -312,11 +379,12 @@ def clean_accom_df(accom_df, remove_zero=True):
     # for season in ["2324", "2425"]: add the start 1/2 month split
     accom_df["Stay Period"] = 0
 
-    accom_df = month_splits_2324(accom_df, "Start date", "1920")
-    accom_df = month_splits_2324(accom_df, "Start date", "2324")
-    accom_df = month_splits_2324(accom_df, "Start date", "2425")
+    accom_df = month_splits_2324(accom_df, month_split_column, "1920")
+    accom_df = month_splits_2324(accom_df, month_split_column, "2324")
+    accom_df = month_splits_2324(accom_df, month_split_column, "2425")
 
-    accom_df["Stay Month"] = pd.to_datetime(accom_df["Start date"]).dt.month_name()
+    accom_df["Stay Month"] = pd.to_datetime(accom_df[month_split_column])\
+                                                    .dt.month_name()
 
     # keep only seasons we care about
     keepers = [ #"'18/19'", # "'14/15'", "'15/16'", "'16/17'", "'17/18'", 
@@ -325,3 +393,4 @@ def clean_accom_df(accom_df, remove_zero=True):
     accom_df = accom_df[accom_df.Season.isin(keepers)]
 
     return accom_df
+

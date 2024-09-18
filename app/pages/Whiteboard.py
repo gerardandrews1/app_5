@@ -37,10 +37,12 @@ current_month = datetime.datetime.today().month
 
 # TODO add more data sources and connect to analytics API
 
-raw_df = load_csv_data("../../Downloads/Bookings Clean.csv")
-accom_df = clean_accom_df(raw_df, remove_zero = False)
-accom_df["Start date"] = pd.to_datetime(accom_df["Start date"])
-accom_df["End date"] = pd.to_datetime(accom_df["End date"])
+raw_df = load_csv_data("../../Downloads/All Bookings Clean.csv")
+accom_df = clean_accom_df(raw_df, "Check In / Start", remove_zero = False)
+accom_df["Check In / Start"] = pd.to_datetime(accom_df["Check In / Start"])
+accom_df["Check Out / End"] = pd.to_datetime(accom_df["Check Out / End"])
+accom_df = accom_df[accom_df["accom_flag"] == 1]
+
 
 
 otd_df = create_otd_df(accom_df, "Gross")
@@ -75,85 +77,122 @@ ga_2023.Date = pd.to_datetime(ga_2023.Date)
 
 ##############  #################
 
-dec_start = pd.to_datetime("2024-12-15")
-mar_finish = pd.to_datetime("2025-03-20")
+def calc_peak_nights():
 
-total_nights = (mar_finish - dec_start).days
+    dec_start = pd.to_datetime("2024-12-15")
+    mar_finish = pd.to_datetime("2025-03-20")
 
-accom_df_2425 = accom_df.query(f""" Season =="'24/25'" & \
-                                  HN_Prop == 1 """)
+    total_nights = (mar_finish - dec_start).days
 
-accom_df_2425["Zero Nights"] = np.where(accom_df_2425["Zero Stay"] == 1, accom_df_2425.Nights, 0)
+    accom_df_2425 = accom_df.query(f""" Season =="'24/25'" & \
+                                    HN_Prop == 1 """)
 
-accom_df_2425["Zero Nights"] = np.where((accom_df_2425["Start date"].between(dec_start, mar_finish)) & \
-                                        (accom_df_2425["End date"].between(dec_start, mar_finish)),
-                                        accom_df_2425["Zero Nights"],
-                                        0)
+    accom_df_2425["Zero Nights"] = np.where(accom_df_2425["Zero Stay"] == 1,
+                                            accom_df_2425["Nights/Days"],
+                                            0)
 
-# 1 if start date greater than 15 dec and less than 20 Mar
-#       Nights.sum()
+    accom_df_2425["Zero Nights"] = np.where(
+        (accom_df_2425["Check In / Start"].between(dec_start, mar_finish)) & \
+        (accom_df_2425["Check Out / End"].between(dec_start, mar_finish)),
+        accom_df_2425["Zero Nights"],
+        0)
 
-# 2 if start date < 15 dec & end date > 15 dec 
-    # end date - dec 15
+    # 1 if Check In / Start greater than 15 dec and less than 20 Mar
+    #       Nights.sum()
 
-# 3 if end date > mar 20 & start date < mar 20 
-    # mar 20 - start date
+    # 2 if Check In / Start < 15 dec & Check Out / End > 15 dec 
+        # Check Out / End - dec 15
 
-accom_df_2425["first_period"] = 0
-accom_df_2425["first_period"] = \
-    np.where((accom_df_2425["Start date"].between(dec_start, mar_finish)) & \
-             (accom_df_2425["End date"].between(dec_start, mar_finish)), \
-             (accom_df_2425["End date"] - accom_df_2425["Start date"]).dt.days, \
-             accom_df_2425["first_period"])
+    # 3 if Check Out / End > mar 20 & Check In / Start < mar 20 
+        # mar 20 - Check In / Start
 
-# Before 15 dec and past dec 15
-accom_df_2425["second_period"] = 0
-accom_df_2425["second_period"] = \
-    np.where((accom_df_2425["Start date"] < dec_start) & \
-             (accom_df_2425["End date"].between(dec_start, mar_finish)), \
-             (accom_df_2425["End date"] - dec_start).dt.days,
-             accom_df_2425["second_period"])
+    accom_df_2425["first_period"] = 0
+    accom_df_2425["first_period"] = \
+        np.where((accom_df_2425["Check In / Start"].between(dec_start, mar_finish)) & \
+                (accom_df_2425["Check Out / End"].between(dec_start, mar_finish)), \
+                (accom_df_2425["Check Out / End"] - accom_df_2425["Check In / Start"]).dt.days, \
+                accom_df_2425["first_period"])
 
-
-accom_df_2425["Peak Nights"] = accom_df_2425.first_period + accom_df_2425.second_period
-accom_df_2425.ID = accom_df_2425["ID"].astype(str)
-
-
-# accom_df_2425.first_period = accom_df_2425["first_period"].astype(str)
-# accom_df_2425.second_period = accom_df_2425["second_period"].astype(str)
-# accom_df_2425.second_period = accom_df_2425["third_period"].astype(str)
-
-# st.write(accom_df_2425.columns)
-
-# st.write(accom_df_2425[["ID", "Lead Guest", "Start date", "End date", "first_period",
-#                         "second_period", ]])
-                        # "second_period", "third_period"]])
-
-gb_rooms = accom_df_2425.groupby(["Vendor", "Product"])["Gross","Peak Nights", "Zero Nights"] \
-                            .sum() \
-                            .reset_index()
-
-kick_vendors = ["Snowbird Studios",
-                "Holiday Niseko",
-                "Ezo Yuki"
-                ]
+    # Before 15 dec and past dec 15
+    accom_df_2425["second_period"] = 0
+    accom_df_2425["second_period"] = \
+        np.where((accom_df_2425["Check In / Start"] < dec_start) & \
+                (accom_df_2425["Check Out / End"].between(dec_start, mar_finish)), \
+                (accom_df_2425["Check Out / End"] - dec_start).dt.days,
+                accom_df_2425["second_period"])
 
 
-kick_products = ["Koyuki 3 - 3 Bed 2 Bath"]
-
-gb_rooms = gb_rooms[~gb_rooms.Vendor.isin(kick_vendors)]
-gb_rooms = gb_rooms[~gb_rooms.Product.isin(kick_products)]
-
-
-gb_rooms.Gross = round(gb_rooms.Gross.astype(int) * 0.000001, 2)
-gb_rooms["Available Nights"] = total_nights - gb_rooms["Peak Nights"]
-gb_rooms["Peak Occupancy"] = round((gb_rooms["Peak Nights"] / total_nights) * 100, 1)
+    accom_df_2425["Peak Nights"] = accom_df_2425.first_period + \
+                                   accom_df_2425.second_period
+    
+    
+    accom_df_2425["Package ID"] = accom_df_2425["Package ID"].astype(str)
 
 
-gb_rooms = gb_rooms[["Vendor",
-                     "Product",
-                     "Gross",
-                     "Available Nights",
-                     "Peak Occupancy",
-                     "Zero Nights"]]
-st.write(gb_rooms)
+    gb_rooms = accom_df_2425.groupby(
+                    ["Vendor", "Room/Resource"])["Item Sell Price",
+                                                 "Peak Nights",
+                                                 "Zero Nights"] \
+                                                    .sum() \
+                                                    .reset_index()
+
+    # Some lists used to filter our long stays/season bookings
+    kick_vendors = [#"Snowbird Studios",
+                    "Holiday Niseko",
+                    "Ezo Yuki",
+                    "Yuki no Taki 2",
+                    ]
+
+
+    kick_primary_key = [
+                        "Asuka 5 - 10 8",
+                        "Snowbird Studios 10"
+                        ]
+
+    # Create column to kick those out of rental pool
+    gb_rooms["primary_key"] = gb_rooms["Vendor"] + " " +\
+                                    gb_rooms["Room/Resource"].astype(str)
+
+
+    # Kick the rooms we don't want in the calculation
+    gb_rooms = gb_rooms[~gb_rooms.Vendor.isin(kick_vendors)]
+
+    gb_rooms = gb_rooms[~gb_rooms["primary_key"].isin(kick_primary_key)]
+
+
+    gb_rooms["Item Sell Price"] = round( \
+        gb_rooms["Item Sell Price"].astype(int) * 0.000001, 2)
+    
+    gb_rooms["Available Nights"] = total_nights - gb_rooms["Peak Nights"]
+    
+    gb_rooms["Peak Occupancy"] = round((gb_rooms["Peak Nights"] / \
+                                        total_nights) * 100, 1)
+
+
+    gb_rooms = gb_rooms[[
+                    "Vendor",
+                    "Room/Resource",
+                    "Item Sell Price",
+                    "Peak Nights",
+                    "Available Nights",
+                    "Peak Occupancy",
+                    "Zero Nights"
+                    ]]
+
+    percent_full_peak = (gb_rooms.shape[0]*total_nights) - \
+                         gb_rooms["Peak Nights"].sum()
+    
+    peak_occupancy = (gb_rooms["Peak Nights"].sum()) /( gb_rooms.shape[0]*total_nights)
+    st.write(peak_occupancy)
+    avail_nights_left = gb_rooms["Available Nights"].sum()
+
+
+    st.write(avail_nights_left) 
+
+    st.dataframe(gb_rooms, hide_index = True)
+    return gb_rooms["Available Nights"].sum(), 
+
+
+# st.write(gb_rooms["Peak Nights"].sum() / (gb_rooms.shape[0]*total_nights) ) 
+
+calc_peak_nights()

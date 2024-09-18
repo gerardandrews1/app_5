@@ -68,6 +68,7 @@ if user_input:
         with row2[0]: bk.write_gsg_upsell()
         with row2[0]: bk.write_OTA_email()
 
+
     
 
 

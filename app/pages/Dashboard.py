@@ -38,7 +38,7 @@ current_month = datetime.datetime.today().month
 # TODO add more data sources and connect to analytics API
 
 raw_df = load_csv_data("../../Downloads/Bookings Clean.csv")
-accom_df = clean_accom_df(raw_df)
+accom_df = clean_accom_df(raw_df, "Start date")
 
 otd_df = create_otd_df(accom_df, "Gross")
 
