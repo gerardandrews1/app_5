@@ -2,6 +2,7 @@
 # TODO want to figure out a better way to build db
 # perhaps a loop, but difficult to include metrics
 
+import calendar
 import datetime
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
@@ -192,7 +193,194 @@ def calc_peak_nights():
     st.dataframe(gb_rooms, hide_index = True)
     return gb_rooms["Available Nights"].sum(), 
 
+def calc_nights():
 
-# st.write(gb_rooms["Peak Nights"].sum() / (gb_rooms.shape[0]*total_nights) ) 
+    """Calculate how many nights bookable in Dec
+       
+       broken down by room
+    """
+# 2002, 1)
+    winter_periods = [[2024, 12, "early_dec", "late_dec"],
+                     [2025, 1, "early_jan", "late_jan"],
+                     [2025, 2, "early_feb", "late_feb"],
+                     [2025, 3, "early_mar", "late_mar"]]
 
-calc_peak_nights()
+
+
+    start_end_dates = {
+        "early_dec" : [pd.to_datetime("2024-12-01"), pd.to_datetime("2024-12-15")],
+        "late_dec" : [pd.to_datetime("2024-12-16"), pd.to_datetime("2024-12-31")],
+        "early_jan" : [pd.to_datetime("2025-01-01"), pd.to_datetime("2025-01-15")],
+        "late_jan" : [pd.to_datetime("2025-01-16"), pd.to_datetime("2025-01-31")],
+        "early_feb" : [pd.to_datetime("2025-02-01"), pd.to_datetime("2025-02-14")],
+        "late_feb" : [pd.to_datetime("2025-02-15"), pd.to_datetime("2025-02-28")],
+        }
+    
+    
+    
+    # for month in winter_periods:
+
+    #     # Get the first last day of month
+    #     first_week_day, last_day = calendar.monthrange(month[0],
+    #                                                    month[1])
+        
+    #     middle_day = (last_day // 2) + 1
+        
+    #     # Make the date strings
+    #     month_start = f"{str(month[0])}-{str(month[1])}-01"
+    #     month_middle = f"{str(month[0])}-{str(month[1])}-{str(middle_day)}"
+    #     month_end = f"{str(month[0])}-{str(month[1])}-{str(last_day)}"
+        
+    #     # Convert to datetime
+    #     month_start = pd.to_datetime(month_start) 
+    #     month_middle = pd.to_datetime(month_middle)
+    #     month_end = pd.to_datetime(month_end)
+
+    #     st.write(middle_day)
+    #     start_end_dates[month[2]] = [month_start, month_middle]
+    #     start_end_dates[month[3]] = [month_middle, month_end]
+
+    
+    accom_df_2425 = accom_df.query(f""" Season =="'24/25'" & \
+                                    HN_Prop == 1 """)
+
+    accom_df_2425["Zero Nights"] = np.where(accom_df_2425["Zero Stay"] == 1,
+                                            accom_df_2425["Nights/Days"],
+                                            0)
+    
+    accom_df_2425["Last Night"] = accom_df_2425["Check Out / End"] - pd.Timedelta(days = 1)
+
+    for key, value in start_end_dates.items():
+
+        accom_df_2425[key] = 0
+
+   
+        # start and end date both in the period 
+        accom_df_2425[key] = \
+            np.where((accom_df_2425["Check In / Start"].between(value[0], value[1])) & \
+                    (accom_df_2425["Last Night"].between(value[0], value[1])), \
+                    (accom_df_2425["Check Out / End"] - accom_df_2425["Check In / Start"]).dt.days , \
+                    accom_df_2425[key])
+
+        # start date in month but goes into next month
+        accom_df_2425[key] = \
+            np.where((accom_df_2425["Check In / Start"].between(value[0], value[1])) & \
+                    (accom_df_2425["Last Night"] > value[1]),  \
+                    (value[1] - accom_df_2425["Check In / Start"]).dt.days +1,
+                    accom_df_2425[key])
+
+        # start date in last month but finishes this month
+        accom_df_2425[key] = \
+            np.where((accom_df_2425["Check In / Start"] < value[0]) & \
+                (accom_df_2425["Last Night"].between(value[0], value[1])), \
+                (accom_df_2425["Check Out / End"] - value[0]).dt.days ,
+                accom_df_2425[key])
+        
+        # # start date before month and end date after month
+        # # TODO It's this one that's causing the error
+        # if "early" in key:
+
+        accom_df_2425[key] = \
+                        np.where((accom_df_2425["Check In / Start"] < value[0]) & \
+                        (accom_df_2425["Last Night"] > value[1]),  \
+                        (value[1] - value[0]).days +1,
+                        accom_df_2425[key])
+
+        # else:
+
+        #     accom_df_2425[key] = \
+        #             np.where((accom_df_2425["Check In / Start"] < value[0]) & \
+        #             (accom_df_2425["Check Out / End"] > value[1]),  \
+        #             (value[1] - value[0]).days,
+        #             accom_df_2425[key])
+            
+        # # To fix those starting on the middle day of the month    
+        # if "late" in key:
+            
+    #     accom_df_2425[key] = \
+    #     np.where((accom_df_2425["Check In / Start"] == value[0]),  
+    #         accom_df_2425[key] - 1,
+    #         accom_df_2425[key])
+
+    accom_df_2425["Last Night"] = accom_df_2425["Last Night"].dt.date
+
+    st.write(accom_df_2425[["Vendor",
+                            "Check In / Start",
+                            "Last Night",
+                            "Check Out / End",
+                            "early_dec",
+                            "late_dec",
+                            "early_jan",
+                            "late_jan"]])
+    #                                              "late_jan"]])
+        
+    # st.write(accom_df_2425[["Vendor","Check In / Start", "Check Out / End", "early_dec",
+    #                                              "late_dec",
+    #                                              "early_jan",
+    #                                              "late_jan",
+    #                                              "early_feb",
+    #                                              "late_feb",
+    #                                              "early_mar",
+    #                                              "late_mar"]])
+    
+    
+    # # Finally a groupby to bring all together    
+    gb_rooms = accom_df_2425.groupby(
+                    ["Vendor", "Room/Resource"])["Item Sell Price",
+                                                 "early_dec",
+                                                 "late_dec",
+                                                 "early_jan",
+                                                 "late_jan",
+                                                #  "early_feb",
+                                                #  "late_feb",
+                                                #  "early_mar",
+                                                #  "late_mar"] \
+                                                ] \
+                                                    .sum() \
+                                                    .reset_index()
+    
+    # # Some lists used to filter our long stays/season bookings
+    kick_vendors = [#"Snowbird Studios",
+                    "Holiday Niseko",
+                    "Ezo Yuki",
+                    "Yuki no Taki 2",
+                    ]
+
+
+    kick_primary_key = [
+                        "Asuka 5 - 10 8",
+                        "Snowbird Studios 10"
+                        ]
+
+    # Create column to kick those out of rental pool
+    gb_rooms["primary_key"] = gb_rooms["Vendor"] + " " +\
+                              gb_rooms["Room/Resource"].astype(str)
+
+
+    # Kick the rooms we don't want in the calculation
+    gb_rooms = gb_rooms[~gb_rooms.Vendor.isin(kick_vendors)]
+
+    gb_rooms = gb_rooms[~gb_rooms["primary_key"].isin(kick_primary_key)]
+    st.write(gb_rooms)
+
+
+    cols = ["period", "occupancy"]
+    occupancy = []
+
+    for k, v  in start_end_dates.items():
+        
+        occupancy.append([k,
+                         gb_rooms[k].sum()/ \
+                        (gb_rooms.shape[0] * ((v[1] - v[0]).days + 1))])
+        st.write(k)
+        st.write(gb_rooms[k].sum()/ \
+                 (gb_rooms.shape[0] * ((v[1] - v[0]).days + 1)))
+        
+        
+    final_df = pd.DataFrame(occupancy, columns = cols)
+        
+    st.write(final_df)
+
+        
+calc_nights()
+# calc_peak_nights()

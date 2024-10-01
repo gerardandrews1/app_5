@@ -21,6 +21,7 @@ def call_api(ebook_id, api_id, api_key):
     url = \
     f"https://api.roomboss.com/extws/hotel/v1/listBooking?bookingEid={ebook_id}"
     
+    
     auth = (api_id, api_key)
     
     response = requests.get(url, auth = auth)

@@ -79,7 +79,7 @@ def plot_setup(rows, cols):
 
     fig, ax = plt.subplots(rows, cols,
                            width_ratios=[9, 1.3],
-                           figsize = (6,2.5))
+                           figsize = (8,4))
     plt.subplot(rows,cols,1)
 
     for x in range(0,rows*cols,2):
@@ -209,7 +209,6 @@ def build_hbars(axis, figures_list, title: str):
 
     pass
     
-
 
 def build_bullet(total_2425, otd_2324, total_2324, title: str):
 
