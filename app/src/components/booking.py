@@ -387,7 +387,7 @@ class Booking:
 
         """Write the guest service upsell spiel"""
   
-        if self.guest_email == "":
+        if self.guest_email == "" or "booking.com" in self.guest_email:
             pass   
 
         else:
@@ -423,7 +423,7 @@ class Booking:
 
         """Write the OTA email after they contact us"""
   
-        if self.guest_email == "":
+        if self.guest_email == "" or "booking.com" in self.guest_email:
             pass        
 
         else:
