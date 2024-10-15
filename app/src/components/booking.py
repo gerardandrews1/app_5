@@ -32,7 +32,11 @@ class Booking:
         self.booking_id = ""
         self.eId = ""
         self.custom_id = ""
+        self.package_gs_list = []
 
+
+
+        # st.write(json_response)
         self.service_guide = \
             ("https://holidayniseko.com/sites/default"
              "/files/services/2024-08/Holiday%20Niseko"
@@ -126,6 +130,8 @@ class Booking:
             "https://holidayniseko.evoke.jp/public/yourbooking"\
             ".jsf?id=" + str(self.eId) + "&em=" + self.guest_email
 
+        else:
+            self.payment_link = ""
         return
 
     def parse_book_dict(self):
@@ -133,6 +139,7 @@ class Booking:
         """Checks if accom or service item and parse accordingly"""
 
         booking_dict = self.booking_dict
+
 
         for booking in booking_dict:
 
@@ -150,8 +157,8 @@ class Booking:
 
                 self.parse_accom_item(booking)
     
-            elif booking.get("bookingType") == "SERVICE":
-                self.parse_service_item(booking)
+            if booking.get("bookingType") == "SERVICE":
+                self.parse_service_item(booking, self.package_gs_list)
 
         return
     
@@ -190,7 +197,7 @@ class Booking:
         self.rooms_booked = booking.get("items", {})
         
         # Pass rooms dict to parsing function
-        self.room_dict = self.parse_room_list(self.rooms_booked)
+        self.room_list_todf = self.parse_room_list2(self.rooms_booked)
 
         return
  
@@ -247,13 +254,82 @@ class Booking:
         # set the total for the booking
         self.accom_total = self.booking_accom_total
 
+
         return rooms_dict
+    
+    def parse_room_list2(self, room_list):
+        
+        """
+        Parses room dictionary and calculates total 
+        cost for each room
+        """
+        
+        rooms_list_todf = []
+        self.booking_accom_total = 0
+        self.guests = 0
+
+
+        # loop through each room and add details to a list
+        # list over dictoinary in case 2 x rooms with same name
+        for room in room_list:
+
+            curr_room_list = []
+
+            curr_room_list.append(self.vendor)
+            room_name = room.get("roomType", {}).get("roomTypeName", {})
+            curr_room_list.append(room_name)
+
+            # dict_key = f"{self.vendor} {room_name}"
+
+            room_checkin = room.get("checkIn", {})
+            room_checkin = room_checkin.replace("-","/")
+            curr_room_list.append(room_checkin)
+
+            room_checkout = room.get("checkOut", {})
+            room_checkout = room_checkout.replace("-","/")
+            curr_room_list.append(room_checkout)
+
+            nights = (pd.to_datetime(room_checkout) - pd.to_datetime(room_checkin)).days
+            curr_room_list.append(nights)
+            self.nights = nights
+            
+            room_guests = room.get("numberGuests", {})
+            curr_room_list.append(room_guests)
+            self.guests += room_guests
+
+            # curr_room_list.append(room.get("priceRack", {}))
+            # curr_room_list.append(room.get("priceNet", {}))
+            price_retail = room.get("priceRetail", {})
+            curr_room_list.append(f"¥{price_retail:,.0f}")
+
+            # Add back to master dictionary          
+            rooms_list_todf.append(curr_room_list)
+            
+            # Add to the total if multiple rooms
+            # self.booking_accom_total += price_retail
+   
+        # set the total for the booking
+        self.accom_total = self.booking_accom_total
+
+
+        return rooms_list_todf
             
 
-    def parse_service_item(self, booking):
+    def parse_service_item(self, booking, package_gs_list):
         
         """Parse each guest service booking"""
 
+
+
+        booking_list = []
+
+        # st.write(booking)
+        gs_items = booking.get("items", {})
+
+        # for item in gs_items:
+        #     st.write(item)
+
+        
         active = booking.get("active", {})
         # self.eId  = booking.get("eId", {}) # need to add back in for GS table
         extent = booking.get("extent", {})
@@ -266,6 +342,7 @@ class Booking:
                 
             provider = booking.get("serviceProvider", {}).get("serviceProviderName")
             service_name = item.get("service", {}).get("serviceName", {})
+            st.write(provider, service_name)
             start_date = item.get("startDate")
             end_date = item.get("endDate")
 
@@ -295,8 +372,8 @@ class Booking:
         """
 
         self.payment_info_df = pd.DataFrame(
-                    columns = ["Invoice Number", "Date Created", "Amount",
-                               "Due Date", "Payment Amount", "Date Paid",
+                    columns = ["Invoice", "Created", "Invoiced",
+                               "Due", "Paid", "Date Paid",
                                "Payment ID"])
 
         for invoice in pay_inv_dict:
@@ -325,14 +402,14 @@ class Booking:
             
             self.payment_info_df.loc[len(self.payment_info_df)] = pay_line
 
-        self.amount_invoiced = self.payment_info_df.Amount.sum()
-        self.amount_received = self.payment_info_df["Payment Amount"].sum()
+        self.amount_invoiced = self.payment_info_df.Invoiced.sum()
+        self.amount_received = self.payment_info_df.Paid.sum()
 
         pass
 
 
 
-    def write_payment_info(self):
+    def write_payment_df(self):
 
         """Writes the payment info and invoices dataframe
             
@@ -344,13 +421,13 @@ class Booking:
             """ Used to colour payment df if not paid """
 
             # For non managed not paid
-            if (s["Payment Amount"] == 0) & \
-                (self.managed_by == "Non Managed") & (s.Amount > 0):
+            if (s["Paid"] == 0) & \
+                (self.managed_by == "Non Managed") & (s.Invoiced > 0):
                 return ['background-color: #ffb09c'] * len(s)
             
             # HN Managed not paid
-            elif (s["Payment Amount"] == 0) & \
-                (self.booking_source_1 != "OTA") & (s.Amount > 0):
+            elif (s["Paid"] == 0) & \
+                (self.booking_source_1 != "OTA") & (s.Invoiced > 0):
 
                 return ['background-color: #ffead5'] * len(s)    
             
@@ -360,41 +437,65 @@ class Booking:
 
         st.markdown("###### Invoices and Payments")
 
-        # if self.payment_info_df:
+
         if self.pay_inv_dict:
             payment_info_df = self.payment_info_df
-            payment_info_df["Date Created"] = pd.to_datetime(payment_info_df["Date Created"])
-            payment_info_df["Due Date"] = pd.to_datetime(payment_info_df["Due Date"])
+            payment_info_df["Created"] = pd.to_datetime(payment_info_df["Created"])
+            payment_info_df["Due"] = pd.to_datetime(payment_info_df["Due"])
 
             payment_info_df["Date Paid"] = pd.to_datetime(payment_info_df["Date Paid"], errors="coerce")
 
 
             st.markdown(self.payment_info_df.style.hide(axis="index")
                         .apply(highlight_unpaid, axis=1)
-                        .format({"Date Created": lambda x: "{}".format(x.strftime("%d %b %Y")),
-                                 "Due Date": lambda x: "{}".format(x.strftime("%d %b %Y")),
+                        .format({"Created": lambda x: "{}".format(x.strftime("%d %b %Y")),
+                                 "Due": lambda x: "{}".format(x.strftime("%d %b %Y")),
                                  "Date Paid": lambda x: "{}".format(x.strftime("%d %b %Y") if pd.notnull(x) else ''),
-                                              "Amount": "¥{:,.0f}",
-                                              "Payment Amount": "¥{:,.0f}",
+                                              "Invoiced": "¥{:,.0f}",
+                                              "Paid": "¥{:,.0f}",
                                 })
                         .set_table_styles([{'selector': 'th', 'props': [('font-size', '10pt'),('text-align','center')]}])
                         .set_properties(**{'font-size': '8pt','text-align':'center'}).to_html(),unsafe_allow_html=True)
         
         pass
 
+    def write_invoice_sentences(self):
+
+        """ Write the invoices, due dates and payment link quickly and easily"""
+        
+        invoices_expander = st.expander("Invoices", expanded = False)
+
+        if self.payment_link:
+
+            for invoice in self.pay_inv_dict:
+                    if invoice["paymentAmount"] == 0:
+
+                        with invoices_expander:
+                                st.markdown(
+                                    f"Your payment of ¥{invoice['invoiceAmount']:,.0f} \
+                                    is due by \
+                                    {pd.to_datetime(invoice['invoiceDueDate']).strftime('%B %d, %Y')}.")
+                                
+                                st.markdown(
+                                    f"[You can view your booking details and make payments here](%s)" \
+                                    % self.payment_link)
+                    
+                            
+        pass
 
     def write_gsg_upsell(self):
 
         """Write the guest service upsell spiel"""
   
-        if self.guest_email == "" or "booking.com" in self.guest_email:
-            pass   
+        try: 
+            if self.guest_email == "" or "booking.com" in self.guest_email:
+                pass   
 
-        else:
+            else:
             
-            gs_upsell_expander = st.expander("GS Upsell", expanded = False)
-            with gs_upsell_expander:
-                st.write(f"""
+                gs_upsell_expander = st.expander("GS Upsell", expanded = False)
+                with gs_upsell_expander:
+                    st.write(f"""
                     **Enhance Your Stay with Guest Services**  
                        
                     Make your Niseko trip even better! 
@@ -415,7 +516,8 @@ class Booking:
                           unsafe_allow_html = True)
 
         # st.markdown("<p class='big-font'> You can make payment and check the details of your booking [here.](%s)" % pay_str)
-
+        except TypeError:
+            return
         pass
 
 
@@ -423,14 +525,15 @@ class Booking:
 
         """Write the OTA email after they contact us"""
   
-        if self.guest_email == "" or "booking.com" in self.guest_email:
-            pass        
+        try: 
+            if self.guest_email == "" or "booking.com" in self.guest_email:
+                pass        
 
-        else:
+            else:
             
-            ota_email_expander = st.expander("OTA Email", expanded = False)
-            with ota_email_expander:
-                st.write(f"""
+                ota_email_expander = st.expander("OTA Email", expanded = False)
+                with ota_email_expander:
+                    st.write(f"""
                     
                     Hi {self.given_name},  
 
@@ -457,7 +560,8 @@ class Booking:
                     """,
                           unsafe_allow_html = True)
 
-        # st.markdown("<p class='big-font'> You can make payment and check the details of your booking [here.](%s)" % pay_str)
+        except TypeError:
+            return
 
         pass
 
@@ -478,19 +582,29 @@ class Booking:
             st.write(f":red[Booking is Cancelled]")
 
         st.markdown(f"[Open #{self.eId} in RoomBoss](%s)" % self.rboss_launch)
+        
+        if self.guest_phone:
+            st.write(f":telephone_receiver:", self.guest_phone)
+
+        try :
+            if ("booking.com" not in self.guest_email) \
+                & (self.guest_email != ""):
+                st.write(f":email: {self.guest_email}")
+                st.write("---")
 
 
-        if ("booking.com" not in self.guest_email) \
-            & (self.guest_email != ""):
+                if (self.guest_email != None) & (self.eId != None):
+                    st.markdown(f"[View booking details and make payments here](%s)" % self.payment_link)
+
+                    st.markdown(f"[Book your guest services here](%s)" % self.gsg_link)
+
+            else:
+                st.write(f":red[Need to get guest email]")
+                st.write("---")
+
+
+        except TypeError:
             st.write(self.guest_email)
-
-            if (self.guest_email != None) & (self.eId != None):
-                st.markdown(f"[Payment Link](%s)" % self.payment_link)
-
-                st.markdown(f"[GSG Link #{self.eId}](%s)" % self.gsg_link)
-
-        else:
-            st.write(f":red[Need to get guest email]")
         
 
 
@@ -522,7 +636,7 @@ class Booking:
         pass
 
 
-    def write_room_info(self, room_dict):
+    def write_room_info(self, room_list_todf):
         
         """Take room dictionary return the room 
         
@@ -531,29 +645,17 @@ class Booking:
 
         # init dataframe for accom bookings
         booking_df = pd.DataFrame(
-                        columns=["Check-in", "Check-out", "Nights",
-                                "Guests", "Property", "Room", "Rate"])
+                            room_list_todf,
+                            columns=[
+                                "Property", "Room", "Check-in", "Check-out",
+                                "Nights", "Guests",  "Rate"])
 
         st.markdown(f"###### Booking #{self.eId}")
-
-        for key, value in room_dict.items():
-
-            booking_line = [room_dict[key].get("check_in"),
-                            room_dict[key].get("check_out"),
-                            room_dict[key].get("nights"),
-                            room_dict[key].get("number_guests"),
-                            self.vendor,
-                            room_dict[key].get("room_name"),
-                            f"¥{room_dict[key].get('room_retail_price'):,.0f}"]
-
-
-
-                
-            booking_df.loc[len(booking_df)] = booking_line
 
         # Here I set the accom min check in and max check out
         self.accom_checkin = booking_df["Check-in"].min()
         self.accom_checkout = booking_df["Check-out"].max()
+
 
 
         st.markdown(booking_df.style.hide(axis="index")\
@@ -619,16 +721,26 @@ class Booking:
         """ Used to colour payment df if not paid """
 
         # For non managed not paid
-        if (s["Payment Amount"] == 0) & \
-            (self.managed_by == "Non Managed") & (s.Amount > 0):
+        if (s["Paid"] == 0) & \
+            (self.managed_by == "Non Managed") & (s.Invoiced > 0):
             return ['background-color: #ffb09c'] * len(s)
         
         # HN Managed not paid
-        elif (s["Payment Amount"] == 0) & \
-            (self.booking_source_1 != "OTA") & (s.Amount > 0):
+        elif (s["Paid"] == 0) & \
+            (self.booking_source_1 != "OTA") & (s.Invoiced > 0):
 
             return ['background-color: #ffead5'] * len(s)    
         
         # Paid
         else:
             return ['background-color: white'] * len(s)
+        
+    def write_notes(self):
+
+        if self.notes == "" or self.notes == None:
+            return
+        
+        # with st.container(border = True):
+        st.markdown(f"###### Notes")
+        st.markdown(self.notes)
+        pass

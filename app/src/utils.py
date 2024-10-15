@@ -13,6 +13,18 @@ from dotenv import load_dotenv
 from pathlib import Path
 
 
+def percent_change(percent_change_figure):
+                    
+                if percent_change_figure > 0: 
+                    css_class = "increase"
+                    arrow = "&#9650"
+                
+                else: 
+                    css_class = "decrease"
+                    arrow = "&#9660"
+
+                return css_class, arrow
+
 def single_hbar_setup(title: str):
 
     """Setup the hbars for breakdowns"""
@@ -332,21 +344,39 @@ def get_prop_management():
 
     return management_dict
 
+def highlight_unpaid_inv(s):
+    
+    """Highlight non managed unpaid invoices"""
 
-def highlight_unpaid(self, s):
+    if (s["HN_Prop"] == 0):
+        return ['background-color: #ffb09c'] * len(s)
+    
+    # HN Managed not paid
+    # elif (s["Received"] == 0) & \
+    #     (s["Sales Channel"] != "OTA") & (s["Invoiced"] > 0):
+
+    #     return ['background-color: #ffead5'] * len(s)    
+    
+    # # Paid
+    # else:
+    #     return ['background-color: white'] * len(s)
+    
+    pass
+
+def highlight_unpaid(s):
 
     """ Used to colour payment df if not paid """
     
 
     # For non managed not paid
 
-    if (s["Payment Amount"] == 0) & \
-        (self.managed_by == "Non Managed") & (s.Amount > 0):
+    if (s["Received"] == 0) & \
+        (s["Managed by"] != "HN") & (s["Invoiced"] > 0):
         return ['background-color: #ffb09c'] * len(s)
     
     # HN Managed not paid
-    elif (s["Payment Amount"] == 0) & \
-        (self.booking_source_1 != "OTA") & (s.Amount > 0):
+    elif (s["Received"] == 0) & \
+        (s["Sales Channel"] != "OTA") & (s["Invoiced"] > 0):
 
         return ['background-color: #ffead5'] * len(s)    
     
@@ -366,7 +396,7 @@ def load_csv_data(path: str):
     return df
 
 
-def clean_accom_df(accom_df, month_split_column, remove_zero = True):
+def clean_accom_df(accom_df, month_split_column, remove_zero = False):
 
     # Remove owner stays
     if remove_zero ==  True:
@@ -393,3 +423,22 @@ def clean_accom_df(accom_df, month_split_column, remove_zero = True):
 
     return accom_df
 
+def clean_payments_df(payment_df):
+
+
+    payment_df["Count"] = 1 # column to utilise groupby sums
+    payment_df["Booking ID"] = payment_df["Booking ID"].astype(str)
+    # Cast columns to datetime
+    payment_df.Created = pd.to_datetime(payment_df.Created, dayfirst = False)
+    payment_df["Due Date"] = pd.to_datetime(payment_df["Due Date"],
+                                            dayfirst = False)
+
+    # for season in ["2324", "2425"]: add the start 1/2 month split
+   
+    # keep only seasons we care about
+    keepers = [ #"'18/19'", # "'14/15'", "'15/16'", "'16/17'", "'17/18'", 
+            "'19/20'","'22/23'","'23/24'", "'24/25'"]
+
+    payment_df = payment_df[payment_df.Season.isin(keepers)]
+
+    return payment_df

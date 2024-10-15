@@ -16,9 +16,22 @@ from src.components.booking import Booking
 st.set_page_config(page_title = "List Booking",
                    layout="wide")
 
-row1 = st.columns([1, 2.8, 2.5])
+st.markdown(
+    """
+    <style>
+        footer {display: none}
+        [data-testid="stHeader"] {display: none}
+    </style>
+    """, unsafe_allow_html = True
+)
+row0 = st.columns([1.8,2.5, 2.5])
+row1 = st.columns([2, 2.8, 2.5])
 divider = st.columns(1)
-row2 = st.columns([2, 2, 2])
+row2 = st.columns([2, 2.5, 2])
+
+with open('style.css') as f:
+    st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html = True)
+
 
 def highlight_not_paid(s):
     
@@ -37,8 +50,10 @@ def highlight_not_paid(s):
 
 ################ SIDEBAR START  ################# 
 
-with st.sidebar:
-    user_input = st.text_input("Input Booking ID").strip()
+# with st.sidebar:
+with row0[0]: 
+    with st.container(border = True):
+        user_input = st.text_input("Input Booking ID").strip()
 
 
 ################ SIDEBAR FINISH #################
@@ -56,17 +71,32 @@ if user_input:
                      api_type = "listBooking")
         
         # write booking info
-        with row1[0]: bk.write_key_booking_info()
-        with row1[1]: bk.write_payment_info()
-        with row1[2]: bk.write_room_info(bk.room_dict)
-        with row1[2]: bk.write_email_subject()
+        with row0[0]: 
+            with st.container(border = True):
+                bk.write_key_booking_info()
+                bk.write_notes()
+
+        
+        with row0[1]:
+
+                bk.write_room_info(bk.room_list_todf) 
+                st.write("---")
+                bk.write_payment_df()
+                
+        # with row0[1]: 
+            
+
+        
 
         
         with divider[0]: st.write("---")
         
         # write email templates 
-        with row2[0]: bk.write_gsg_upsell()
-        with row2[0]: bk.write_OTA_email()
+        with row0[2]: 
+            bk.write_email_subject()
+            bk.write_gsg_upsell()
+        with row0[2]: bk.write_OTA_email()
+        with row0[2]: bk.write_invoice_sentences()
 
 
     
