@@ -29,8 +29,8 @@ row1 = st.columns([2, 2.8, 2.5])
 divider = st.columns(1)
 row2 = st.columns([2, 2.5, 2])
 
-with open('style.css') as f:
-    st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html = True)
+# with open('style.css') as f:
+#     st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html = True)
 
 
 def highlight_not_paid(s):
