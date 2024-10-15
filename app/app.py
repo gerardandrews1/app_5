@@ -24,7 +24,7 @@ st.markdown(
     </style>
     """, unsafe_allow_html = True
 )
-row0 = st.columns([1.8,2.5, 2.5])
+row0 = st.columns([1.8,2.5, 2.3])
 row1 = st.columns([2, 2.8, 2.5])
 divider = st.columns(1)
 row2 = st.columns([2, 2.5, 2])

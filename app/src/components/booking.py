@@ -612,9 +612,9 @@ class Booking:
 
         """Subject line for the email"""
 
-        self.email_subject_line = (f"Booking #{self.eId} {self.vendor} "
+        self.email_subject_line = (f"{self.vendor} Booking #{self.eId} ~  "
                                 f"{self.accom_checkin} - {self.accom_checkout} "
-                                f"({self.nights} nights, {self.guests} guests)")
+                                f"({self.nights} nights) {self.guests} guests")
         
         st.write(self.email_subject_line)
 
