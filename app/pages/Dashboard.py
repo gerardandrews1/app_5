@@ -54,7 +54,11 @@ payments_df.sort_values(by = "Due Date",
 
 payments_df = payments_df[(payments_df["Due Date"] < today) | \
                           (payments_df["Due Date"] < (today + pd.Timedelta(days = 14)))]
-payments_df = payments_df[payments_df["Payment Amount"] ==0]
+
+payments_df = payments_df[payments_df["Due Date"] > pd.to_datetime("2024-09-01")]
+payments_df = payments_df[payments_df["Payment Amount"] == 0]
+
+
 # payments_df = payments_df[payments_df["Payment Amount"] == 0]
 payments_df = payments_df[payments_df["Booking Status"] == "Active"]
 
@@ -65,7 +69,7 @@ payments_df = payments_df[[
                 "Lead Guest",
                  "Due Date",
                 "Invoice Amount",
-                "1st Vendor",
+                "Vendor",
                 "Package Start Date",
                 "HN_Prop",
                 "Invoice Date",
@@ -73,7 +77,8 @@ payments_df = payments_df[[
             ]]
 
 payments_html =  payments_df.style.format({
-                "Due Date": lambda x: "{}".format(x.strftime("%d %b -- %H:%M")),
+                "Due Date": lambda x: "{}".format(x.strftime("%d %b %Y")),
+                
                 "Invoice Amount": "¥{:,.0f}",
                 }).apply(highlight_unpaid_inv, axis = 1)
 
@@ -141,11 +146,19 @@ def make_accom_report(accom_df):
 
     return accom_html
 
+accom_df_24 = accom_df.query("""Season == "'24/25'" """)
+not_balanced = accom_df_24[(accom_df.Difference > 0 ) | (accom_df.Difference < 0 )]
+
+not_balanced = not_balanced[not_balanced.Vendor != "Neyuki"]
+
+
 accom_html = make_accom_report(accom_df)
 
 
 with row0[0]:
-        tab1, tab2 = st.tabs(["Recent Bookings", "Payments"])
+        tab1, tab2, tab3 = st.tabs(["Recent Bookings",
+                                     "Payments",
+                                     "Not Balanced"  ])
 
 
 with tab1:
@@ -156,9 +169,27 @@ with st.sidebar:
       st.text_input("Enter booking ID")
 #
 with tab2:
-    st.dataframe(payments_html, hide_index = True, use_container_width = True, height = 380)
+    st.dataframe(payments_html, hide_index = True, use_container_width = True, height = 500)
 
-
+with tab3:
+     st.dataframe(not_balanced[[   
+                    "Created", 
+                    "Booking ID",
+                    "Package Invoiced Amount",
+                    "Package Received Amount",
+                    "Difference",
+                    "Custom ID",
+                    "Lead Guest Name",
+                    "ChannelAS2", 
+                    "Vendor",
+                    
+                    "Nights/Days", 
+                    "Item Sell Price",
+                    "Managed by",
+                    "Option 1", 
+                    "Lead Guest Residency",
+                    
+                    ]])
 
 # st.dataframe(accom_html, hide_index = True, use_container_width = False, height = 380)
 

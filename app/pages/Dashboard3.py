@@ -725,7 +725,7 @@ def calc_nights():
                                                 .reset_index()
     
     # # Some lists used to filter our long stays/season bookings
-    kick_vendors = [#"Snowbird Studios",
+    kick_vendors = ["Asuka Value Studios",
                     "Holiday Niseko",
                     "Ezo Yuki",
                     "Yuki no Taki 2",
@@ -747,7 +747,7 @@ def calc_nights():
 
     gb_rooms = gb_rooms[~gb_rooms["primary_key"].isin(kick_primary_key)]
 
-    # st.write(gb_rooms)
+    st.write(gb_rooms)
 
     cols = ["Period", "Occupancy", "Available Nights"]
     occupancy = []

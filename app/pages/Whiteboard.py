@@ -31,11 +31,14 @@ st.set_page_config(page_title = "Whiteboard",
 
 
 
+def get_cognito_entry(entry_number):
+    
+    api_key = st.secrets["cognito_api_key"]
 
-api_key = st.secrets["cognito_api_key"]
+    url = f"https://www.cognitoforms.com/api/forms/11/entries/{entry_number}?access_token={api_key}"
 
-url = f"https://www.cognitoforms.com/api/forms/12/entries/12?access_token={api_key}"
+    response = requests.get(url)
 
-response = requests.get(url)
+    return response.json()
 
-st.write(response.json())
+

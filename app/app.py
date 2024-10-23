@@ -24,7 +24,7 @@ st.markdown(
     </style>
     """, unsafe_allow_html = True
 )
-row0 = st.columns([1.8,2.5, 2.3])
+row0 = st.columns([1.8,2.5, 1.8])
 row1 = st.columns([2, 2.8, 2.5])
 divider = st.columns(1)
 row2 = st.columns([2, 2.5, 2])
@@ -74,29 +74,30 @@ if user_input:
         with row0[0]: 
             with st.container(border = True):
                 bk.write_key_booking_info()
+                # bk.write_gsg_guide()
                 bk.write_notes()
 
         
         with row0[1]:
-
-                bk.write_room_info(bk.room_list_todf) 
-                st.write("---")
-                bk.write_payment_df()
+                with st.container():
+                        
+                    bk.write_room_info(bk.room_list_todf) 
+                    st.write("---")
+                    bk.write_payment_df()
                 
-        # with row0[1]: 
-            
 
-        
 
         
         with divider[0]: st.write("---")
         
         # write email templates 
         with row0[2]: 
-            bk.write_email_subject()
-            bk.write_gsg_upsell()
-        with row0[2]: bk.write_OTA_email()
-        with row0[2]: bk.write_invoice_sentences()
+            
+            with st.container():
+                bk.write_email_subject()
+                bk.write_gsg_upsell()
+                bk.write_OTA_email()
+                bk.write_invoice_sentences()
 
 
     

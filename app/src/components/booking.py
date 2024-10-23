@@ -539,13 +539,13 @@ class Booking:
 
                     Thank you for getting back to us. We have linked your email and you can now book private transfers, rentals and more!
 
-                    <a href='{self.gsg_link}'> Book your guest services</a>  
+                    <a href='{self.gsg_link}'> Book your guest services here</a>  
 
-                    View your booking details and make payments for guest services here:  
+                    For pricing and options, please see our <a href='{self.service_guide}'> Guest Services Guide</a>.
+
+                    View your booking details and make payments here:  
                     <a href='{self.payment_link}'> View booking details</a>  
-
-                    For a full range of services, see our <a href='{self.service_guide}'> Guest Services Guide</a>.
-
+                    
                     What's Next? Our front desk team will contact you closer to your check-in date with:
 
                     - Arrival instructions
