@@ -1,2 +1,4 @@
 ratelimit
 matplotlib
+dotenv
+pathlib
