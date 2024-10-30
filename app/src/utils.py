@@ -30,7 +30,7 @@ def set_management_variable(variable, file_name):
     except FileNotFoundError as e:
         
         with open(f"app/data/{file_name}.txt", 'r') as text:
-            prop_list = text.read().split(",")
+            props_raw = text.read().split(",")
             prop_list = [x.strip() for x in props_raw]
             return prop_list
     pass
