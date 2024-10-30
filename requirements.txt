@@ -1,3 +1,3 @@
 ratelimit
 matplotlib
-dotenv
+python-dotenv
