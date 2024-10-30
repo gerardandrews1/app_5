@@ -25,8 +25,9 @@ st.markdown(
     """, unsafe_allow_html = True
 )
 row0 = st.columns([1.8,2.5, 1.8])
-row1 = st.columns([2, 2.8, 2.5])
 divider = st.columns(1)
+
+row1 = st.columns([2, 2.8, 2.5])
 row2 = st.columns([2, 2.5, 2])
 
 # with open('style.css') as f:
@@ -96,11 +97,15 @@ if user_input:
             with st.container():
                 bk.write_email_subject()
                 bk.write_gsg_upsell()
+                bk.write_first_ota_email()
+                bk.write_second_OTA_email()
                 bk.write_OTA_email()
                 bk.write_invoice_sentences()
 
 
-    
+        with row1[0]:
+            with st.container():
+                bk.write_links_box()
 
 
        

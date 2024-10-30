@@ -13,6 +13,10 @@ import streamlit as st
 from dotenv import load_dotenv
 from ratelimit import limits, sleep_and_retry
 from plotly.subplots import make_subplots
+from streamlit_gsheets import GSheetsConnection
+conn = st.connection("gsheets", type=GSheetsConnection)
+df = conn.read()
+
 
 from src.utils import load_csv_data
 from src.utils import create_otd_df

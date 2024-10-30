@@ -13,6 +13,7 @@ import streamlit as st
 from ratelimit import limits, sleep_and_retry
 from dataclasses import dataclass, asdict
 # from src.utils import highlight_unpaid
+from src.utils import set_management_variable
 
 ## TODO separate streamlit UI processes to separate class
 ## TODO get min checkin and max check-out date for email subject 
@@ -42,8 +43,8 @@ class Booking:
              "/files/services/2024-08/Holiday%20Niseko"
              "%20Guest%20Service%20Guide%202024_2025.pdf")
         
-        self.get_hn_props()
-
+        # self.get_hn_props()
+        self.set_prop_management_lists()
 
         # 1 Get the dictionaries
         # check API type
@@ -104,6 +105,25 @@ class Booking:
                 self.hn_props = [x.strip() for x in hn_props_raw]
 
             return
+        
+    def set_prop_management_lists(self):
+
+        """Get list of props for each management company"""
+        hn_props = []
+        vn_props = []
+        h2_props = [] 
+        hokkaido_travel_props = []
+        mnk_props = []
+        nisade_props = []
+        
+
+        self.hn_props = set_management_variable(hn_props, "hn_props")
+        self.vn_props = set_management_variable(vn_props, "vn_props")
+        self.h2_props = set_management_variable(h2_props, "h2_props")
+        self.nisade_props = set_management_variable(nisade_props, "nisade_props")
+        self.mnk_props = set_management_variable(mnk_props, "mnk_props")
+        self.hokkaido_travel_props = set_management_variable(hokkaido_travel_props,
+                                                        "hokkaido_travel_props")
 
 
     def print_json(self):
@@ -187,13 +207,28 @@ class Booking:
         self.vendor_url = booking.get("hotel", {}).get("hotelUrl", {})
         self.vendor = booking.get("hotel", {}).get("hotelName", {})
 
+        # I need to functionise this and move it #
         # Check if self managed or not 
         if self.vendor in self.hn_props:
-            self.managed_by = "HN"
+            self.managed_by = "Holiday Niseko"
+
+        elif self.vendor in self.vn_props:
+            self.managed_by = "Vacation Niseko"
+        
+        elif self.vendor in self.mnk_props:
+            self.managed_by = "Mnk (Midori no Ki)"
+
+        elif self.vendor in self.nisade_props:
+            self.managed_by = "Nisade"
+
+        elif self.vendor in self.h2_props:
+            self.managed_by = "H2"
+
+        elif self.vendor in self.hokkaido_travel_props:
+            self.managed_by = "Hokkaido Travel - Andy"
 
         else:
-            self.managed_by = "Non Managed"
-
+            self.managed_by = "~ not sure, check roomboss"
         self.rooms_booked = booking.get("items", {})
         
         # Pass rooms dict to parsing function
@@ -565,6 +600,131 @@ class Booking:
 
         pass
 
+    def write_first_ota_email(self):
+
+        """Write the OTA email after they contact us"""
+        if "booking.com" in self.guest_email:
+            pass
+
+        if self.guest_email != None:
+            pass
+
+
+        try: 
+            
+            
+            ota_email_expander = st.expander(
+                "First OTA message in app - Before guest registers email",
+                expanded = False)
+            
+            with ota_email_expander:
+                st.markdown(f"""
+                
+                Hi {self.given_name},  
+
+                Thank you for your booking. We're Holiday Niseko, the local property manager for your accommodation.
+
+
+                To receive your door codes and check-in details, please confirm your email address here:
+                https://holidayniseko.com/email/{self.eId}
+
+                By doing so, you'll unlock access to:  
+                -- Your door codes and entry instructions  
+                -- Online check-in  
+                -- Our local support team  
+                -- Book airport transfers, lift tickets, ski rentals, and more  
+
+
+                This essential step is required for accessing your accommodation and our services.
+
+
+                If you have any concerns, please contact us at res@holidayniseko.com
+                    
+                    
+                """,
+                        unsafe_allow_html = True)
+
+        except TypeError:
+            return
+
+        pass
+
+    def write_second_OTA_email(self):
+
+        """Write the OTA email after they contact us"""
+  
+        try: 
+            if self.guest_email == "" or "booking.com" in self.guest_email:
+                pass        
+
+            else:
+            
+                ota_email_expander = st.expander(
+                    "Second OTA Email - After guest registers email",
+                    expanded = False)
+                
+                with ota_email_expander:
+                    st.write(f"""
+                             
+                    Access Your Holiday Niseko Booking - Reservation #{self.eId}
+                    
+                    Hi {self.given_name},  
+
+                    Thank you for your email. Your MyBooking page is now ready.
+
+                    Access MyBooking here: https://holidayniseko.com/my-booking/  
+                    Your Reservation ID: {self.eId}
+
+
+                    To log in, simply enter your email address and reservation ID shown above.
+
+
+                    On MyBooking, you can: 
+                    - View door codes and check-in instructions
+                    - Book guest services (airport transfers, lift tickets, etc) - Popular services book quickly
+                    - Complete online check-in 
+
+
+                    Questions? Contact us anytime. 
+
+                    We look forward to welcoming you to Niseko!
+
+                    """,
+                          unsafe_allow_html = True)
+
+        except TypeError:
+            return
+
+        pass
+
+    def write_links_box(self):
+
+        """Writes the expandable links box to the bottom
+        
+        of the app
+        """
+        wine_dine_link = "https://www.winedineniseko.com/"
+
+        rhythm_referral_link = "https://book.rhythmjapan.com/public/booking/order02.jsf?mv=1&vs=rhythmniseko&segment=HolidayNiseko"
+
+        gsg_link = "https://holidayniseko.com/sites/default/files/services/2024-08/Holiday%20Niseko%20Guest%20Service%20Guide%202024_2025.pdf"
+
+        
+
+        with st.container():
+
+            links_expander = st.expander(
+                    "Links",
+                    expanded = False)
+            
+            with links_expander:
+                st.markdown(f"[Niseko Wine and Dine link](%s)" % wine_dine_link)
+                st.markdown(f"[Rhythm referral link](%s)" % rhythm_referral_link)
+                st.markdown(f"[Guest Service Guide link](%s)" % gsg_link)
+                
+
+
+
 
     def write_key_booking_info(self):
 
@@ -574,7 +734,7 @@ class Booking:
 
         st.write(f"Created - {self.created_date} ")
 
-        st.write(f"{self.managed_by} Property")
+        st.write(f"Managed by {self.managed_by}")
 
         if self.active_check == True:
             st.write(f"**:green[Booking is Active]**")

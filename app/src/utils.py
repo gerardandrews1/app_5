@@ -13,6 +13,29 @@ from dotenv import load_dotenv
 from pathlib import Path
 
 
+def set_management_variable(variable, file_name):
+    
+    """Opens the file and gets the list of current props
+    
+    for that management company
+    """
+
+    try: 
+        with open(f"data/{file_name}.txt", 'r') as text:
+            props_raw = text.read().split(",")
+            prop_list = [x.strip() for x in props_raw]
+            return prop_list
+
+    # File setup different locally vs on the github instance
+    except FileNotFoundError as e:
+        
+        with open(f"app/data/{file_name}.txt", 'r') as text:
+            prop_list = text.read().split(",")
+            prop_list = [x.strip() for x in props_raw]
+            return prop_list
+    pass
+
+
 def percent_change(percent_change_figure):
                     
                 if percent_change_figure > 0: 
