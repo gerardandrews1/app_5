@@ -97,7 +97,6 @@ if user_input:
             with st.container():
                 bk.write_email_subject()
                 bk.write_gsg_upsell()
-                # bk.write_first_ota_email()
                 bk.write_second_OTA_email()
                 bk.write_OTA_email()
                 bk.write_invoice_sentences()
