@@ -443,7 +443,6 @@ class Booking:
         pass
 
 
-
     def write_payment_df(self):
 
         """Writes the payment info and invoices dataframe
@@ -517,6 +516,47 @@ class Booking:
                     
                             
         pass
+
+    def write_overdue_email(self):
+
+        """ Write the invoices, due dates and payment link quickly and easily"""
+        
+        invoices_expander = st.expander("Overdue", expanded = False)
+
+        # if self.payment_link:
+
+
+            # for invoice in self.pay_inv_dict:
+            #         if invoice["paymentAmount"] == 0:
+            #             pass
+
+            #         else:
+        with invoices_expander:
+                st.write(
+            f"""
+            Hi {self.given_name},  
+
+            I hope this email finds you well. This is a friendly reminder that            
+            we have not yet received payment for your upcoming 
+            accommodation at {self.vendor}.
+
+            Please note that your reservation will be automatically canceled in 
+            48 hours if payment is not received.  
+            
+            You can complete your payment securely through the following link:  
+            <a href='{self.payment_link}'> View invoices and make payments here </a>   
+
+            If you have already processed the payment or wish to cancel your 
+            booking, please let us know immediately.  
+
+            Should you have any questions or concerns, our team is here to help.
+            
+            """,
+                          unsafe_allow_html = True)
+                    
+                            
+        pass
+
 
     def write_gsg_upsell(self):
 
@@ -604,10 +644,10 @@ class Booking:
 
         """Write the OTA email after they contact us"""
         if "booking.com" in self.guest_email:
-            pass
+            return
 
-        if self.guest_email != None:
-            pass
+        if len(self.guest_email) > 1:
+            return
 
 
         try: 
@@ -670,7 +710,7 @@ class Booking:
                     
                     Hi {self.given_name},  
 
-                    Thank you for your email. Your MyBooking page is now ready.
+                    Thank you for registering your email. Your MyBooking page is now ready.
 
                     Access MyBooking here: https://holidayniseko.com/my-booking/  
                     Your Reservation ID: {self.eId}

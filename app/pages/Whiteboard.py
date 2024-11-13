@@ -18,6 +18,8 @@ import time
 
 from dotenv import load_dotenv
 from plotly.subplots import make_subplots
+from ratelimit import limits
+
 
 from src.utils import load_csv_data
 from src.utils import create_otd_df
@@ -41,4 +43,39 @@ def get_cognito_entry(entry_number):
 
     return response.json()
 
+
+
+
+# decorator to throttle api calls 
+@limits(calls = 15, period = 120)
+def call_gs_api(ebook_id, api_id, api_key):
+    
+    """
+    Call API with wrapper only 15 calls
+    per 2 min limit imposed
+    Using API credentials
+
+    
+    """
+
+    url = \
+    f"https://api.roomboss.com/packages/{ebook_id}"
+    
+    
+    auth = (api_id, api_key)
+    
+    response = requests.get(url, auth = auth, headers = {})
+
+    if response.status_code != 200:
+        st.write(f"{response.reason}\
+                 {response.status_code}, check input")
+        
+    st.write(response.text)
+
+    return response
+
+call_gs_api(1363430,
+            st.secrets["api_id"],
+            st.secrets["api_key"]
+            )
 
