@@ -1,4 +1,3 @@
 ratelimit
 matplotlib
 python-dotenv
-streamlit_gsheets
