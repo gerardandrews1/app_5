@@ -521,7 +521,7 @@ class Booking:
 
         """ Write the invoices, due dates and payment link quickly and easily"""
         
-        invoices_expander = st.expander("Overdue", expanded = False)
+        invoices_expander = st.expander("Overdue Payment", expanded = False)
 
         # if self.payment_link:
 
@@ -534,11 +534,12 @@ class Booking:
         with invoices_expander:
                 st.write(
             f"""
+            Holiday Niseko Payment Required - Reservation #{self.eId}
+
             Hi {self.given_name},  
 
-            I hope this email finds you well. This is a friendly reminder that            
-            we have not yet received payment for your upcoming 
-            accommodation at {self.vendor}.
+            I hope this email finds you well. This is a friendly reminder that 
+            we have not yet received payment for your upcoming accommodation at {self.vendor}.
 
             Please note that your reservation will be automatically canceled in 
             48 hours if payment is not received.  
@@ -552,7 +553,7 @@ class Booking:
             Should you have any questions or concerns, our team is here to help.
             
             """,
-                          unsafe_allow_html = True)
+            unsafe_allow_html = True)
                     
                             
         pass
@@ -769,12 +770,19 @@ class Booking:
     def write_key_booking_info(self):
 
         """Writes key info to left col app"""
-
-        st.markdown(f"###### {self.eId} - {self.full_name}")
+        st.markdown(f"##### {self.vendor} #{self.eId}")
+        
+        st.markdown(f"###### {self.full_name}")
 
         st.write(f"Created - {self.created_date} ")
 
-        st.write(f"Managed by {self.managed_by}")
+        # st.write(f"Managed by {self.managed_by}")
+        if self.managed_by == 'Holiday Niseko':
+            st.write(f"**:green[Managed by Holiday Niseko]**")
+
+        else:
+            st.write(f"**:red[Managed by {self.managed_by}]**")
+
 
         if self.active_check == True:
             st.write(f"**:green[Booking is Active]**")
