@@ -38,6 +38,7 @@ def connect_to_gspread():
         credentials_dict,
         scopes=scope
     )
+    st.write(gspread.authorize(credentials))
     return gspread.authorize(credentials)
 
 def get_cognito_sheet_data():
@@ -46,7 +47,8 @@ def get_cognito_sheet_data():
     try:
         # Connect to Google Sheets
         gc = connect_to_gspread()
-        
+        st.write(gc)
+
         # Open spreadsheet and worksheet
         spreadsheet = gc.open("All Bookings")
         worksheet = spreadsheet.get_worksheet(2)
@@ -55,9 +57,12 @@ def get_cognito_sheet_data():
         data = worksheet.get_all_values()
         headers = data.pop(0)
         df = pd.DataFrame(data, columns=headers)
+        return df
+
 
     except Exception:
-        st.write("Exception")    
+        return
+        # st.write(Exception)    
 
     # Open google sheets
     # sh = gc.open("All Bookings")
@@ -69,7 +74,6 @@ def get_cognito_sheet_data():
     # headers = data.pop(0)
     # df = pd.DataFrame(data, columns=headers)
 
-    return df
 
 
 def get_cognito_info(ebook_id, df):

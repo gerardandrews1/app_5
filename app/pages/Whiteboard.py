@@ -10,8 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
+
 import requests
 import seaborn as sns
 import streamlit as st
@@ -97,17 +96,107 @@ def get_cognito_info(ebook_id, df):
     st.write(result)
 # get_cognito_entry()
 
-df = get_gsheet_data()
-st.write(df)
+import streamlit as st
+import gspread
+from google.oauth2.service_account import Credentials
+import json
 
-get_cognito_info("1820789", df)
+def test_gspread_connection():
+    st.write("Starting connection test...")
+    
+    try:
+        # Step 1: Check if secrets are accessible
+        st.write("1. Checking secrets...")
+        try:
+            # Print first few characters of key values to verify they exist
+            st.write(f"Project ID: {st.secrets['general']['project_id'][:10]}...")
+            st.write(f"Client Email: {st.secrets['general']['client_email'][:15]}...")
+            st.write("✅ Secrets are accessible")
+        except Exception as e:
+            st.error(f"❌ Error accessing secrets: {str(e)}")
+            return
+            
+        # Step 2: Set up credentials
+        st.write("2. Setting up credentials...")
+        scope = ['https://spreadsheets.google.com/feeds',
+                'https://www.googleapis.com/auth/spreadsheets',
+                'https://www.googleapis.com/auth/drive']
+                
+        credentials_dict = {
+            "type": st.secrets["general"]["type"],
+            "project_id": st.secrets["general"]["project_id"],
+            "private_key_id": st.secrets["general"]["private_key_id"],
+            "private_key": st.secrets["general"]["private_key"],
+            "client_email": st.secrets["general"]["client_email"],
+            "client_id": st.secrets["general"]["client_id"],
+            "auth_uri": st.secrets["general"]["auth_uri"],
+            "token_uri": st.secrets["general"]["token_uri"],
+            "auth_provider_x509_cert_url": st.secrets["general"]["auth_provider_x509_cert_url"],
+            "client_x509_cert_url": st.secrets["general"]["client_x509_cert_url"]
+        }
+        
+        try:
+            credentials = Credentials.from_service_account_info(
+                credentials_dict,
+                scopes=scope
+            )
+            st.write("✅ Credentials created successfully")
+        except Exception as e:
+            st.error(f"❌ Error creating credentials: {str(e)}")
+            return
+            
+        # Step 3: Authorize gspread
+        st.write("3. Authorizing gspread...")
+        try:
+            client = gspread.authorize(credentials)
+            st.write("✅ Gspread authorized successfully")
+        except Exception as e:
+            st.error(f"❌ Error authorizing gspread: {str(e)}")
+            return
+            
+        # Step 4: Try to access a spreadsheet
+        st.write("4. Attempting to access spreadsheet...")
+        try:
+            # First, list all spreadsheets the service account has access to
+            spreadsheets = client.list_spreadsheet_files()
+            st.write("Available spreadsheets:")
+            for sheet in spreadsheets:
+                st.write(f"- {sheet['name']}")
+                
+            # Try to open your specific spreadsheet
+            if 'gcp_service_account' in st.secrets and 'sheet_name' in st.secrets['gcp_service_account']:
+                sheet_name = st.secrets['gcp_service_account']['sheet_name']
+                spreadsheet = client.open(sheet_name)
+                st.write(f"✅ Successfully opened spreadsheet: {sheet_name}")
+            else:
+                st.warning("⚠️ No sheet_name specified in secrets")
+                
+        except Exception as e:
+            st.error(f"❌ Error accessing spreadsheet: {str(e)}")
+            return
+            
+        st.success("🎉 All connection tests passed!")
+        
+    except Exception as e:
+        st.error(f"Unexpected error: {str(e)}")
 
-# get_cognito_entry()
+# Run the test
+st.title("Gspread Connection Test")
+if st.button("Run Connection Test"):
+    test_gspread_connection()
 
+# Display requirements
+st.sidebar.write("Requirements:")
+st.sidebar.code("""
+pip install gspread
+pip install google-auth
+""")
 
-
-# call_gs_api(1363430,
-            # st.secrets["api_id"],
-            # st.secrets["api_key"]
-            # )
-
+# Display important notes
+st.sidebar.write("Important checks:")
+st.sidebar.markdown("""
+1. Make sure the Google Sheet is shared with the service account email
+2. Enable Google Sheets API in Google Cloud Console
+3. Enable Google Drive API in Google Cloud Console
+4. Check that your service account has the correct permissions
+""")
