@@ -16,7 +16,6 @@ import streamlit as st
 import time
 
 from dotenv import load_dotenv
-from plotly.subplots import make_subplots
 from ratelimit import limits
 
 
