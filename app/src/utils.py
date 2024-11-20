@@ -38,7 +38,7 @@ def connect_to_gspread():
         credentials_dict,
         scopes=scope
     )
-    st.write(gspread.authorize(credentials))
+
     return gspread.authorize(credentials)
 
 def get_cognito_sheet_data():
@@ -47,7 +47,6 @@ def get_cognito_sheet_data():
     try:
         # Connect to Google Sheets
         gc = connect_to_gspread()
-        st.write(gc)
 
         # Open spreadsheet and worksheet
         spreadsheet = gc.open("All Bookings")
@@ -57,23 +56,12 @@ def get_cognito_sheet_data():
         data = worksheet.get_all_values()
         headers = data.pop(0)
         df = pd.DataFrame(data, columns=headers)
+        
         return df
 
 
     except Exception:
         return
-        # st.write(Exception)    
-
-    # Open google sheets
-    # sh = gc.open("All Bookings")
-
-    # # clear today sheet and update data
-    # cognito_sheet = sh.get_worksheet(2)
-    
-    # data = cognito_sheet.get_all_values()
-    # headers = data.pop(0)
-    # df = pd.DataFrame(data, columns=headers)
-
 
 
 def get_cognito_info(ebook_id, df):
@@ -89,9 +77,7 @@ def build_css_table(eId,
                     phone,
                     arv_time,
                     cognito_done):
-                    # arv_method, 
-                    # date_submitted
-                    # ):
+                  
     if phone == "":
         phone = "-"
 

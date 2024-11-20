@@ -103,97 +103,67 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 import json
+import streamlit as st
+import gspread
+from google.oauth2.service_account import Credentials
+import pandas as pd
 
-def test_gspread_connection():
-    st.write("Starting connection test...")
+import streamlit as st
+import gspread
+from google.oauth2.service_account import Credentials
+import pandas as pd
+
+def get_cognito_data():
+    # Define scope
+    scope = [
+        'https://spreadsheets.google.com/feeds',
+        'https://www.googleapis.com/auth/spreadsheets',
+        'https://www.googleapis.com/auth/drive'
+    ]
     
-    try:
-        # Step 1: Check if secrets are accessible
-        st.write("1. Checking secrets...")
-        try:
-            st.write(f"Project ID: {st.secrets['general']['project_id'][:10]}...")
-            st.write(f"Client Email: {st.secrets['general']['client_email'][:15]}...")
-            st.write("✅ Secrets are accessible")
-        except Exception as e:
-            st.error(f"❌ Error accessing secrets: {str(e)}")
-            return
-            
-        # Step 2: Set up credentials
-        st.write("2. Setting up credentials...")
-        scope = ['https://spreadsheets.google.com/feeds',
-                'https://www.googleapis.com/auth/spreadsheets',
-                'https://www.googleapis.com/auth/drive']
-                
-        credentials_dict = {
-            "type": st.secrets["general"]["type"],
-            "project_id": st.secrets["general"]["project_id"],
-            "private_key_id": st.secrets["general"]["private_key_id"],
-            "private_key": st.secrets["general"]["private_key"],
-            "client_email": st.secrets["general"]["client_email"],
-            "client_id": st.secrets["general"]["client_id"],
-            "auth_uri": st.secrets["general"]["auth_uri"],
-            "token_uri": st.secrets["general"]["token_uri"],
-            "auth_provider_x509_cert_url": st.secrets["general"]["auth_provider_x509_cert_url"],
-            "client_x509_cert_url": st.secrets["general"]["client_x509_cert_url"]
-        }
-        
-        credentials = Credentials.from_service_account_info(
-            credentials_dict,
-            scopes=scope
-        )
-        st.write("✅ Credentials created successfully")
-            
-        # Step 3: Authorize gspread
-        st.write("3. Authorizing gspread...")
-        client = gspread.authorize(credentials)
-        st.write("✅ Gspread authorized successfully")
-            
-        # Step 4: List available spreadsheets
-        st.write("4. Listing available spreadsheets...")
-        spreadsheets = client.list_spreadsheet_files()
-        if spreadsheets:
-            st.write("Available spreadsheets:")
-            for sheet in spreadsheets:
-                st.write(f"- {sheet['name']} (ID: {sheet['id']})")
-        else:
-            st.warning("No spreadsheets found accessible to this service account")
-        
-        # Step 5: Try to open specific spreadsheet
-        st.write("5. Attempting to open specific spreadsheet...")
-        if 'gcp_service_account' in st.secrets and 'sheet_name' in st.secrets['gcp_service_account']:
-            sheet_name = st.secrets['gcp_service_account']['sheet_name']
-            try:
-                spreadsheet = client.open(sheet_name)
-                st.write(f"✅ Successfully opened spreadsheet: {sheet_name}")
-                
-                # List all worksheets
-                worksheets = spreadsheet.worksheets()
-                st.write("Worksheets in this spreadsheet:")
-                for ws in worksheets:
-                    st.write(f"- {ws.title}")
-                
-            except gspread.exceptions.SpreadsheetNotFound:
-                st.error(f"❌ Could not find spreadsheet named: {sheet_name}")
-                st.info("Try sharing the spreadsheet with: " + credentials_dict['client_email'])
-        else:
-            st.warning("⚠️ No sheet_name specified in secrets")
-            
-        st.success("🎉 Connection test completed!")
-        
-    except Exception as e:
-        st.error(f"Unexpected error: {str(e)}")
+    credentials = Credentials.from_service_account_info(
+        st.secrets["general"],
+        scopes=scope
+    )
+    
+    gc = gspread.authorize(credentials)
+    
+    # Open using the direct spreadsheet ID
+    sheet = gc.open_by_key('1HcE08poobjoIpJEvSD9t1SLrFsRGGnJDCk-ANAky6q4')
+    
+    # Get the CognitoExport worksheet
+    worksheet = sheet.worksheet('CognitoExport')
+    
+    # Get all data
+    data = worksheet.get_all_records()
+    return pd.DataFrame(data)
 
-# Run the test
-st.title("Gspread Connection Test")
-if st.button("Run Connection Test"):
-    test_gspread_connection()
+st.title('Cognito Export Data')
 
-# Display helpful information
-st.sidebar.markdown("""
-### Quick Fix Steps:
-1. Make sure you've shared your Google Sheet with:
-   - The service account email from your credentials
-   - With "Editor" access rights
-2. Check that your sheet name matches exactly
-3. Or use the sheet ID instead of name in your code
-""")
+try:
+    # Load the data
+    df = get_cognito_data()
+    
+    # Display basic info
+    st.write(f"Total rows: {len(df)}")
+    st.write("Columns:", list(df.columns))
+    
+    # Show first few rows
+    st.write("First 5 rows:")
+    st.dataframe(df.head())
+    
+    # Add some basic filtering options
+    if len(df.columns) > 0:
+        selected_column = st.selectbox("Select column to filter", df.columns)
+        unique_values = df[selected_column].unique()
+        selected_value = st.selectbox(f"Select {selected_column}", unique_values)
+        
+        filtered_df = df[df[selected_column] == selected_value]
+        st.write(f"Filtered data for {selected_column} = {selected_value}")
+        st.dataframe(filtered_df)
+
+except Exception as e:
+    st.error(f"Error: {str(e)}")
+    st.write("Debug info:")
+    st.write("Spreadsheet ID: 1HcE08poobjoIpJEvSD9t1SLrFsRGGnJDCk-ANAky6q4")
+    st.write("Service Account:", st.secrets["general"]["client_email"])
