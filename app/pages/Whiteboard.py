@@ -99,6 +99,11 @@ import gspread
 from google.oauth2.service_account import Credentials
 import json
 
+import streamlit as st
+import gspread
+from google.oauth2.service_account import Credentials
+import json
+
 def test_gspread_connection():
     st.write("Starting connection test...")
     
@@ -106,7 +111,6 @@ def test_gspread_connection():
         # Step 1: Check if secrets are accessible
         st.write("1. Checking secrets...")
         try:
-            # Print first few characters of key values to verify they exist
             st.write(f"Project ID: {st.secrets['general']['project_id'][:10]}...")
             st.write(f"Client Email: {st.secrets['general']['client_email'][:15]}...")
             st.write("✅ Secrets are accessible")
@@ -133,47 +137,48 @@ def test_gspread_connection():
             "client_x509_cert_url": st.secrets["general"]["client_x509_cert_url"]
         }
         
-        try:
-            credentials = Credentials.from_service_account_info(
-                credentials_dict,
-                scopes=scope
-            )
-            st.write("✅ Credentials created successfully")
-        except Exception as e:
-            st.error(f"❌ Error creating credentials: {str(e)}")
-            return
+        credentials = Credentials.from_service_account_info(
+            credentials_dict,
+            scopes=scope
+        )
+        st.write("✅ Credentials created successfully")
             
         # Step 3: Authorize gspread
         st.write("3. Authorizing gspread...")
-        try:
-            client = gspread.authorize(credentials)
-            st.write("✅ Gspread authorized successfully")
-        except Exception as e:
-            st.error(f"❌ Error authorizing gspread: {str(e)}")
-            return
+        client = gspread.authorize(credentials)
+        st.write("✅ Gspread authorized successfully")
             
-        # Step 4: Try to access a spreadsheet
-        st.write("4. Attempting to access spreadsheet...")
-        try:
-            # First, list all spreadsheets the service account has access to
-            spreadsheets = client.list_spreadsheet_files()
+        # Step 4: List available spreadsheets
+        st.write("4. Listing available spreadsheets...")
+        spreadsheets = client.list_spreadsheet_files()
+        if spreadsheets:
             st.write("Available spreadsheets:")
             for sheet in spreadsheets:
-                st.write(f"- {sheet['name']}")
-                
-            # Try to open your specific spreadsheet
-            if 'gcp_service_account' in st.secrets and 'sheet_name' in st.secrets['gcp_service_account']:
-                sheet_name = st.secrets['gcp_service_account']['sheet_name']
+                st.write(f"- {sheet['name']} (ID: {sheet['id']})")
+        else:
+            st.warning("No spreadsheets found accessible to this service account")
+        
+        # Step 5: Try to open specific spreadsheet
+        st.write("5. Attempting to open specific spreadsheet...")
+        if 'gcp_service_account' in st.secrets and 'sheet_name' in st.secrets['gcp_service_account']:
+            sheet_name = st.secrets['gcp_service_account']['sheet_name']
+            try:
                 spreadsheet = client.open(sheet_name)
                 st.write(f"✅ Successfully opened spreadsheet: {sheet_name}")
-            else:
-                st.warning("⚠️ No sheet_name specified in secrets")
                 
-        except Exception as e:
-            st.error(f"❌ Error accessing spreadsheet: {str(e)}")
-            return
+                # List all worksheets
+                worksheets = spreadsheet.worksheets()
+                st.write("Worksheets in this spreadsheet:")
+                for ws in worksheets:
+                    st.write(f"- {ws.title}")
+                
+            except gspread.exceptions.SpreadsheetNotFound:
+                st.error(f"❌ Could not find spreadsheet named: {sheet_name}")
+                st.info("Try sharing the spreadsheet with: " + credentials_dict['client_email'])
+        else:
+            st.warning("⚠️ No sheet_name specified in secrets")
             
-        st.success("🎉 All connection tests passed!")
+        st.success("🎉 Connection test completed!")
         
     except Exception as e:
         st.error(f"Unexpected error: {str(e)}")
@@ -183,18 +188,12 @@ st.title("Gspread Connection Test")
 if st.button("Run Connection Test"):
     test_gspread_connection()
 
-# Display requirements
-st.sidebar.write("Requirements:")
-st.sidebar.code("""
-pip install gspread
-pip install google-auth
-""")
-
-# Display important notes
-st.sidebar.write("Important checks:")
+# Display helpful information
 st.sidebar.markdown("""
-1. Make sure the Google Sheet is shared with the service account email
-2. Enable Google Sheets API in Google Cloud Console
-3. Enable Google Drive API in Google Cloud Console
-4. Check that your service account has the correct permissions
+### Quick Fix Steps:
+1. Make sure you've shared your Google Sheet with:
+   - The service account email from your credentials
+   - With "Editor" access rights
+2. Check that your sheet name matches exactly
+3. Or use the sheet ID instead of name in your code
 """)
