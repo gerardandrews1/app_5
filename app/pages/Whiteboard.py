@@ -4,6 +4,7 @@
 
 import calendar
 import datetime
+import gspread
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
@@ -74,8 +75,39 @@ def call_gs_api(ebook_id, api_id, api_key):
 
     return response
 
-call_gs_api(1363430,
-            st.secrets["api_id"],
-            st.secrets["api_key"]
-            )
+def get_gsheet_data():
+        
+    gc = gspread.service_account()
+
+    # Open google sheets
+    sh = gc.open("All Bookings")
+
+    # clear today sheet and update data
+    cognito_sheet = sh.get_worksheet(2)
+    
+    data = cognito_sheet.get_all_values()
+    headers = data.pop(0)
+    df = pd.DataFrame(data, columns=headers)
+
+    return df
+
+def get_cognito_info(ebook_id, df):
+
+    result = df.loc[df["HolidayNisekoReservationNumber"] == ebook_id]
+    st.write(result)
+# get_cognito_entry()
+
+df = get_gsheet_data()
+st.write(df)
+
+get_cognito_info("1820789", df)
+
+# get_cognito_entry()
+
+
+
+# call_gs_api(1363430,
+            # st.secrets["api_id"],
+            # st.secrets["api_key"]
+            # )
 

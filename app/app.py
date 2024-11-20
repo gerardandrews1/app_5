@@ -92,7 +92,7 @@ if user_input:
         with divider[0]: st.write("---")
         
         # write email templates 
-        with row0[2]: 
+        with row1[2]: 
             
             with st.container():
                 bk.write_email_subject()
@@ -106,6 +106,10 @@ if user_input:
         with row1[0]:
             with st.container():
                 bk.write_links_box()
+
+        with row1[1]:
+            with st.container():
+                bk.write_cognito()
 
 
        

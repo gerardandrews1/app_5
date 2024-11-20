@@ -1,3 +1,4 @@
 ratelimit
 matplotlib
 python-dotenv
+gspread

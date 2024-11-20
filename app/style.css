@@ -109,3 +109,39 @@ html, body, [class*="css"] {
     border-bottom: 10px solid rgb(18, 228, 70);
   }
   
+  .booking-table {
+    font-family: Arial, sans-serif;
+    width: 100%;
+    max-width: 900px;
+    border-collapse: collapse;
+    margin: 15px 0;
+    font-size: 14px;
+  }
+  
+  .booking-table th {
+    background-color: #f8f8f8;
+    color: #333;
+    padding: 12px 8px;
+    text-align: center;
+    border-bottom: 2px solid #2B7A33;
+  }
+  
+  .booking-table td {
+    padding: 12px 8px;
+    text-align: center;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .booking-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    background-color: #FFD700;
+    color: #333;
+  }
+  
+  .booking-reference {
+    color: #2B7A33;
+    font-weight: 500;
+  }

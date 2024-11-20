@@ -3,6 +3,7 @@
 import datetime
 import os
 import glob
+import gspread
 import io
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,6 +12,106 @@ import streamlit as st
 
 from dotenv import load_dotenv
 from pathlib import Path
+
+
+
+def get_gsheet_data():
+        
+    gc = gspread.service_account()
+
+    # Open google sheets
+    sh = gc.open("All Bookings")
+
+    # clear today sheet and update data
+    cognito_sheet = sh.get_worksheet(2)
+    
+    data = cognito_sheet.get_all_values()
+    headers = data.pop(0)
+    df = pd.DataFrame(data, columns=headers)
+
+    return df
+
+
+def get_cognito_info(ebook_id, df):
+
+    result = df.loc[df["HolidayNisekoReservationNumber"] == ebook_id]
+
+    # I will do some cleaning of the result here
+
+    return result
+
+    
+def build_css_table(eId,
+                    phone,
+                    arv_time,
+                    cognito_done):
+                    # arv_method, 
+                    # date_submitted
+                    # ):
+    if phone == "":
+        phone = "-"
+
+    
+# Custom CSS for the table
+    css = f"""
+            <style>
+            .booking-table {{
+                width: 100%;
+                border-collapse: collapse;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+            }}
+
+            .booking-table th {{
+                background-color: #f8f8f8;
+                padding: 12px 8px;
+                text-align: left;
+                border-bottom: 2px solid #2B7A33;
+                width: 40%;
+            }}
+
+            .booking-table td {{
+                padding: 12px 8px;
+                text-align: left;
+                border-bottom: 1px solid #eee;
+            }}
+
+            .status {{
+                padding: 2px 8px;
+                border-radius: 12px;
+                background-color: #FFD700;
+            }}
+
+            .reference {{
+                color: #2B7A33;
+                font-weight: 500;
+            }}
+            </style>
+
+            <table class="booking-table">
+                <tr>
+                    <th>Cognito Completed</th>
+                    <td><span class="reference">{cognito_done}</span></td>
+                </tr>
+                <tr>
+                    <th>&#128222</th>
+                    <td>{phone}</td>
+                </tr>
+                <tr>
+                    <th>Expected arrival time Niseko</th>
+                    <td>{arv_time}</td>
+                </tr>
+           
+                
+                
+            </table>    
+                """
+                
+    st.markdown(css, unsafe_allow_html=True)
+
+        
+    pass
+
 
 
 def set_management_variable(variable, file_name):

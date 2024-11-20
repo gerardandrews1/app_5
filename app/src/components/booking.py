@@ -14,6 +14,9 @@ from ratelimit import limits, sleep_and_retry
 from dataclasses import dataclass, asdict
 # from src.utils import highlight_unpaid
 from src.utils import set_management_variable
+from src.utils import get_gsheet_data
+from src.utils import get_cognito_info
+from src.utils import build_css_table
 
 ## TODO separate streamlit UI processes to separate class
 ## TODO get min checkin and max check-out date for email subject 
@@ -876,6 +879,57 @@ class Booking:
 
    
         return None
+    
+    def write_cognito(self):
+
+        """Queries the google sheet to check if
+        
+        the customer has completed cognito online
+        
+        check-in """
+
+        df =  get_gsheet_data()
+        cognito_entry = get_cognito_info(str(self.eId), df)
+
+        # eId = cognito_entry["HolidayNisekoReservationNumber"].values[0]
+
+        try:
+            eId = cognito_entry["HolidayNisekoReservationNumber"].values[0]
+        except Exception:
+            eId = "-"
+
+        try:
+            phone = cognito_entry["Phone"].values[0]
+        except KeyError:
+            phone = "-"
+
+        try:
+            arv = cognito_entry["ExpectedArrivalTimeInNiseko"].values[0] + " " \
+                + cognito_entry["ArrivingInNisekoBy"].values[0]
+        
+        except IndexError:
+            arv = "-"
+
+        if eId == "-":
+            cognito_done = "No"
+        
+        else:
+            cognito_done = "Yes"
+
+        
+        build_css_table(eId,
+                        phone,
+                        arv,
+                        cognito_done)
+
+            
+                    # arv_time, 
+                    # arv_method, 
+                    # date_submitted
+
+
+
+
 
 
     def attribute_booking(self):
