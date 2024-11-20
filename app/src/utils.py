@@ -12,22 +12,62 @@ import streamlit as st
 
 from dotenv import load_dotenv
 from pathlib import Path
+from google.oauth2.service_account import Credentials
 
 
+    
+def connect_to_gspread():
+    scope = ['https://spreadsheets.google.com/feeds',
+            'https://www.googleapis.com/auth/spreadsheets',
+            'https://www.googleapis.com/auth/drive']
 
-def get_gsheet_data():
+    credentials_dict = {
+        "type": st.secrets["general"]["type"],
+        "project_id": st.secrets["general"]["project_id"],
+        "private_key_id": st.secrets["general"]["private_key_id"],
+        "private_key": st.secrets["general"]["private_key"],
+        "client_email": st.secrets["general"]["client_email"],
+        "client_id": st.secrets["general"]["client_id"],
+        "auth_uri": st.secrets["general"]["auth_uri"],
+        "token_uri": st.secrets["general"]["token_uri"],
+        "auth_provider_x509_cert_url": st.secrets["general"]["auth_provider_x509_cert_url"],
+        "client_x509_cert_url": st.secrets["general"]["client_x509_cert_url"]
+    }
+
+    credentials = Credentials.from_service_account_info(
+        credentials_dict,
+        scopes=scope
+    )
+    return gspread.authorize(credentials)
+
+def get_cognito_sheet_data():
+
+
+    try:
+        # Connect to Google Sheets
+        gc = connect_to_gspread()
         
-    gc = gspread.service_account()
+        # Open spreadsheet and worksheet
+        spreadsheet = gc.open("All Bookings")
+        worksheet = spreadsheet.get_worksheet(2)
+        
+        # Read data
+        data = worksheet.get_all_values()
+        headers = data.pop(0)
+        df = pd.DataFrame(data, columns=headers)
+
+    except Exception:
+        st.write("Exception")    
 
     # Open google sheets
-    sh = gc.open("All Bookings")
+    # sh = gc.open("All Bookings")
 
-    # clear today sheet and update data
-    cognito_sheet = sh.get_worksheet(2)
+    # # clear today sheet and update data
+    # cognito_sheet = sh.get_worksheet(2)
     
-    data = cognito_sheet.get_all_values()
-    headers = data.pop(0)
-    df = pd.DataFrame(data, columns=headers)
+    # data = cognito_sheet.get_all_values()
+    # headers = data.pop(0)
+    # df = pd.DataFrame(data, columns=headers)
 
     return df
 

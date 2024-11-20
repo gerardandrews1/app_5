@@ -14,9 +14,10 @@ from ratelimit import limits, sleep_and_retry
 from dataclasses import dataclass, asdict
 # from src.utils import highlight_unpaid
 from src.utils import set_management_variable
-from src.utils import get_gsheet_data
+from src.utils import get_cognito_sheet_data
 from src.utils import get_cognito_info
 from src.utils import build_css_table
+from src.utils import connect_to_gspread
 
 ## TODO separate streamlit UI processes to separate class
 ## TODO get min checkin and max check-out date for email subject 
@@ -888,7 +889,7 @@ class Booking:
         
         check-in """
 
-        df =  get_gsheet_data()
+        df =  get_cognito_sheet_data()
         cognito_entry = get_cognito_info(str(self.eId), df)
 
         # eId = cognito_entry["HolidayNisekoReservationNumber"].values[0]
