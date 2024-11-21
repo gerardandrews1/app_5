@@ -938,18 +938,10 @@ class Booking:
         )
 
 
-        st.markdown(f"[Online Check-in Link](%s)" % link)
+        st.write("[Online Check-in Link](%s)" % link)
 
 
-            
-                    # arv_time, 
-                    # arv_method, 
-                    # date_submitted
-
-
-
-
-
+   
 
     def attribute_booking(self):
 
