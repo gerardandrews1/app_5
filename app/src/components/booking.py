@@ -18,6 +18,7 @@ from src.utils import get_cognito_sheet_data
 from src.utils import get_cognito_info
 from src.utils import build_css_table
 from src.utils import connect_to_gspread
+from src.utils import create_cognito_link
 
 ## TODO separate streamlit UI processes to separate class
 ## TODO get min checkin and max check-out date for email subject 
@@ -233,6 +234,7 @@ class Booking:
 
         else:
             self.managed_by = "~ not sure, check roomboss"
+        
         self.rooms_booked = booking.get("items", {})
         
         # Pass rooms dict to parsing function
@@ -282,6 +284,7 @@ class Booking:
             curr_room_dict["room_net"] = room.get("priceNet", {})
 
             price_retail =  room.get("priceRetail", {})
+            self.price_retail = price_retail
             curr_room_dict["room_retail_price"] = price_retail
 
             # Add back to master dictionary          
@@ -901,7 +904,7 @@ class Booking:
 
         try:
             phone = cognito_entry["Phone"].values[0]
-        except KeyError:
+        except Exception:
             phone = "-"
 
         try:
@@ -922,6 +925,21 @@ class Booking:
                         phone,
                         arv,
                         cognito_done)
+        
+        # Example usage:
+        link = create_cognito_link(
+            reservation_number = self.eId,
+            check_in = self.accom_checkin,
+            check_out = self.accom_checkout,
+            accommodation = self.vendor,
+            first_name = self.given_name,
+            last_name = self.family_name,
+            email = self.guest_email
+        )
+
+
+        st.markdown(f"[Online Check-in Link](%s)" % link)
+
 
             
                     # arv_time, 
@@ -1007,3 +1025,94 @@ class Booking:
         st.markdown(f"###### Notes")
         st.markdown(self.notes)
         pass
+
+
+    def write_booking_info(self):
+
+            st.markdown(f"""
+                <style>
+                .booking-header {{
+                    background-color: #3d8b44;
+                    color: white;
+                    padding: 10px 14px;
+                    border-radius: 4px 4px 0 0;
+                    margin-bottom: 0;
+                    width: 400px;
+                }}
+                .booking-badge {{
+                    background-color: #FFB800;
+                    color: black;
+                    padding: 3px 10px;
+                    border-radius: 3px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    display: inline-block;
+                    margin-bottom: 6px;
+                }}
+                .booking-title {{
+                    font-size: 16px;
+                    font-weight: bold;
+                    margin-bottom: 3px;
+                }}
+                .booking-subtitle {{
+                    font-size: 12px;
+                    opacity: 0.9;
+                }}
+                .booking-table {{
+                    width: 400px;
+                    border-collapse: collapse;
+                    font-family: Arial, sans-serif;
+                    margin: 0;
+                    border: 1px solid #e5e7eb;
+                }}
+                .label {{
+                    width: 130px;
+                    background-color: #f8f9fa;
+                    padding: 10px 14px;
+                    border-bottom: 1px solid #2B7A33;
+                    border-right: 1px solid #2B7A33;
+                    font-weight: 500;
+                    font-size: 13px;
+                }}
+                .value {{
+                    padding: 10px 14px;
+                    border-bottom: 1px solid #2B7A33;
+                    font-size: 13px;
+                }}
+                .total {{
+                    font-weight: bold;
+                    font-size: 14px;
+                }}
+                </style>
+                
+                <div class="booking-header">
+                    <div class="booking-badge">MyBooking</div>
+                    <div class="booking-title">{self.vendor}</div>
+                    <div class="booking-subtitle">{self.active_check}</div>
+                </div>
+                <table class="booking-table">
+                    <tr>
+                        <td class="label">Check-in</td>
+                        <td class="value">{self.accom_checkin}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Check-out</td>
+                        <td class="value">{self.accom_checkout}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Length of Stay</td>
+                        <td class="value">{self.nights} nights</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Guests</td>
+                        <td class="value">{self.guests}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Total Price</td>
+                        <td class="value total">{self.accom_total}</td>
+                    </tr>
+                </table>
+            """, unsafe_allow_html=True)
+
+
+

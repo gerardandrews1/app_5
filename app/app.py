@@ -110,6 +110,7 @@ if user_input:
         with row1[1]:
             with st.container():
                 bk.write_cognito()
+                # bk.write_booking_info()
 
 
        

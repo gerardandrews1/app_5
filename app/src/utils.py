@@ -15,6 +15,37 @@ from pathlib import Path
 from google.oauth2.service_account import Credentials
 
 
+def create_cognito_link(reservation_number, check_in, check_out, accommodation, first_name, last_name, email):
+    # Replace special characters
+    formatted_email = email.replace('@', '%40')
+    formatted_accommodation = accommodation.replace(' ', '%20')
+    
+    # Format dates to ensure they use hyphens in the URL
+    formatted_check_in = check_in.replace('/', '-')
+    formatted_check_out = check_out.replace('/', '-')
+    
+    base_url = "https://www.cognitoforms.com/HolidayNiseko/HolidayNisekoOnlineCheckinGuestRegistration"
+    
+    entry_data = {
+        "HolidayNisekoReservationNumber": reservation_number,
+        "CheckinDate": formatted_check_in,
+        "CheckoutDate": formatted_check_out,
+        "Accommodation": formatted_accommodation,
+        "LeadGuestFirstName": first_name,
+        "LeadGuestLastName": last_name,
+        "Email": formatted_email
+    }
+    
+    # Create the entry parameter
+    entry = "%7B"  # Opening curly brace in URL encoding
+    for i, (key, value) in enumerate(entry_data.items()):
+        if i > 0:
+            entry += "%2C"  # Comma in URL encoding
+        entry += f'%22{key}%22%3A%22{value}%22'  # Key and value with quotes
+    entry += "%7D"  # Closing curly brace in URL encoding
+    
+    return f"{base_url}?entry={entry}"
+
     
 def connect_to_gspread():
     scope = ['https://spreadsheets.google.com/feeds',
