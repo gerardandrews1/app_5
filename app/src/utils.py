@@ -19,6 +19,9 @@ def create_cognito_link(reservation_number, check_in, check_out, accommodation, 
     # Replace special characters
     formatted_email = email.replace('@', '%40')
     formatted_accommodation = accommodation.replace(' ', '%20')
+    formatted_first_name = first_name.replace(' ', '%20')
+    formatted_last_name = last_name.replace(' ', '%20')
+
     
     # Format dates to ensure they use hyphens in the URL
     formatted_check_in = check_in.replace('/', '-')
@@ -31,8 +34,8 @@ def create_cognito_link(reservation_number, check_in, check_out, accommodation, 
         "CheckinDate": formatted_check_in,
         "CheckoutDate": formatted_check_out,
         "Accommodation": formatted_accommodation,
-        "LeadGuestFirstName": first_name,
-        "LeadGuestLastName": last_name,
+        "LeadGuestFirstName": formatted_first_name,
+        "LeadGuestLastName": formatted_last_name,
         "Email": formatted_email
     }
     
