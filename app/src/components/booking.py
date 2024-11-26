@@ -42,7 +42,7 @@ class Booking:
 
 
 
-        st.write(json_response)
+        # st.write(json_response)
         self.service_guide = \
             ("https://holidayniseko.com/sites/default"
              "/files/services/2024-08/Holiday%20Niseko"

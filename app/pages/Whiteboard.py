@@ -40,10 +40,10 @@ def get_cognito_entry(entry_number):
     
     api_key = st.secrets["cognito_api_key"]
 
-    url = f"https://www.cognitoforms.com/api/forms/11/entries/{entry_number}?access_token={api_key}"
+    url = f"https://www.cognitoforms.com/api/forms/14/entries/{entry_number}?access_token={api_key}"
 
     response = requests.get(url)
-
+    st.write(response.json())
     return response.json()
 
 
@@ -108,4 +108,6 @@ def get_cognito_info(ebook_id, df):
     st.write(result)
 # get_cognito_entry()
 
-call_gs_api(1694617, api_id, api_key)
+# call_gs_api(1694617, api_id, api_key)
+
+get_cognito_entry(14)
