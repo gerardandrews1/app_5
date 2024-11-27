@@ -892,6 +892,13 @@ class Booking:
         
         check-in """
 
+        if self.managed_by != "Holiday Niseko":
+            front_desk_manual_link = "https://docs.google.com/document/d/1-R1zBxcY9sBP_ULDc7D0qaResj9OTU2s/r/edit/edit#heading=h.rus25g7i893t"
+            st.markdown(f"**CHECK-IN INSTRUCTIONS** [FD MANUAL](%s)" % front_desk_manual_link)
+            return
+
+
+
         df =  get_cognito_sheet_data()
         cognito_entry = get_cognito_info(str(self.eId), df)
 
