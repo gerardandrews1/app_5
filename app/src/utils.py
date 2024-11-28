@@ -21,6 +21,8 @@ def create_cognito_link(reservation_number, check_in, check_out, accommodation, 
     formatted_accommodation = accommodation.replace(' ', '%20')
     formatted_first_name = first_name.replace(' ', '%20')
     formatted_last_name = last_name.replace(' ', '%20')
+    formatted_first_name = formatted_first_name.strip()
+    formatted_last_name = formatted_last_name.strip()
 
     
     # Format dates to ensure they use hyphens in the URL

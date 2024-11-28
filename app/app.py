@@ -107,8 +107,9 @@ if user_input:
             with st.container():
                 bk.write_links_box()
 
-        with row1[1]:
+        with row0[2]:
             with st.container():
+                st.markdown("##### Check-in")
                 bk.write_cognito()
                 # bk.write_booking_info()
 
