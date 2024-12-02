@@ -923,6 +923,18 @@ class Booking:
 
         if eId == "-":
             cognito_done = "No"
+            # Example usage:
+            link = create_cognito_link(
+                                    reservation_number = self.eId,
+                                    check_in = self.accom_checkin,
+                                    check_out = self.accom_checkout,
+                                    accommodation = self.vendor,
+                                    first_name = self.given_name,
+                                    last_name = self.family_name,
+                                    email = self.guest_email
+                                    )
+
+            st.write("[Online Check-in Link](%s)" % link)
         
         else:
             cognito_done = "Yes"
@@ -933,19 +945,7 @@ class Booking:
                         arv,
                         cognito_done)
         
-        # Example usage:
-        link = create_cognito_link(
-            reservation_number = self.eId,
-            check_in = self.accom_checkin,
-            check_out = self.accom_checkout,
-            accommodation = self.vendor,
-            first_name = self.given_name,
-            last_name = self.family_name,
-            email = self.guest_email
-        )
 
-
-        st.write("[Online Check-in Link](%s)" % link)
 
 
    
