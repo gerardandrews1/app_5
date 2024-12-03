@@ -1114,4 +1114,21 @@ class Booking:
             """, unsafe_allow_html=True)
 
 
+    def write_days_to_checkin(self):
+
+
+        date_checkin = pd.to_datetime(self.accom_checkin)
+        date_checkout = pd.to_datetime(self.accom_checkout)
+
+        days_to_checkin = (date_checkin - datetime.datetime.today()).days 
+        days_after_checkout = (date_checkout - datetime.datetime.today()).days 
+
+        if date_checkin > datetime.datetime.today():
+            st.write(f"{days_to_checkin} days until check-in")
+
+        else:
+            st.write(f"Customer checked out {days_after_checkout} days ago")
+        
+
+
 

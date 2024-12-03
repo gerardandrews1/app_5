@@ -111,6 +111,7 @@ if user_input:
             with st.container():
                 st.markdown("##### Check-in")
                 bk.write_cognito()
+                bk.write_days_to_checkin()
                 # bk.write_booking_info()
 
 
