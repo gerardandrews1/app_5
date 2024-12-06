@@ -10,6 +10,7 @@ import requests
 import numpy as np
 import streamlit as st
 
+
 from ratelimit import limits, sleep_and_retry
 from dataclasses import dataclass, asdict
 # from src.utils import highlight_unpaid
@@ -24,6 +25,7 @@ from src.utils import create_cognito_link
 ## TODO get min checkin and max check-out date for email subject 
 ## TODO finish  attribute booking and move higher
 ## TODO find a way to separate 2 x same room diff dates kevinfz example
+
 
 @dataclass
 class Booking:
@@ -1115,20 +1117,23 @@ class Booking:
 
 
     def write_days_to_checkin(self):
-
-
-        date_checkin = pd.to_datetime(self.accom_checkin)
-        date_checkout = pd.to_datetime(self.accom_checkout)
-
-        days_to_checkin = (date_checkin - datetime.datetime.today()).days 
-        days_after_checkout = (date_checkout - datetime.datetime.today()).days 
-
-        if date_checkin > datetime.datetime.today():
-            st.write(f"{days_to_checkin} days until check-in")
-
-        else:
-            st.write(f"Customer checked out {days_after_checkout} days ago")
+        date_checkin = pd.to_datetime(self.accom_checkin).normalize()  # Set to midnight
+        date_checkout = pd.to_datetime(self.accom_checkout).normalize()
+        today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)  # Set to midnight
         
+        days_to_checkin = (date_checkin - today).days
+        days_after_checkout = (date_checkout - today).days
 
-
-
+        # Check-in scenarios
+        if days_to_checkin > 0:
+            st.write(f"{days_to_checkin} days until check-in")
+        elif days_to_checkin == 0:
+            st.write("Check-in is today")
+        else:
+            # Already checked in, handle check-out scenarios
+            if days_after_checkout < 0:
+                st.write(f"Checked out {abs(days_after_checkout)} days ago")
+            elif days_after_checkout == 0:
+                st.write("Check-out is today!")
+            else:
+                st.write(f"Currently staying: {days_after_checkout+1} days until check-out")
