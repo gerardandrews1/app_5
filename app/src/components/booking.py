@@ -949,9 +949,7 @@ class Booking:
         
 
 
-
    
-
     def attribute_booking(self):
 
         """Split sales channel 1 and 2 and set self.channel 1 & 2
