@@ -59,8 +59,47 @@ class CheckInInstructions:
                     
                     if st.button("📋", help="Copy check-in instructions"):
                         try:
-                            # Just use pyperclip for now to avoid JavaScript issues
-                            pyperclip.copy(plain_text)
+                            # Create JavaScript for clipboard operations
+                            js_code = """
+                            <script>
+                            function copyToClipboard(text) {
+                                if (navigator.clipboard && window.isSecureContext) {
+                                    navigator.clipboard.writeText(text);
+                                } else {
+                                    // Fallback for older browsers
+                                    const textArea = document.createElement('textarea');
+                                    textArea.value = text;
+                                    textArea.style.position = 'fixed';
+                                    textArea.style.left = '-999999px';
+                                    document.body.appendChild(textArea);
+                                    textArea.select();
+                                    try {
+                                        document.execCommand('copy');
+                                    } catch (error) {
+                                        console.error('Error copying text: ', error);
+                                    }
+                                    textArea.remove();
+                                }
+                            }
+                            </script>
+                            """
+                            
+                            # Sanitize the plain text for JavaScript
+                            sanitized_text = plain_text.replace('\\', '\\\\').replace("'", "\\'").replace('\n', '\\n')
+                            
+                            # Create the execution script
+                            exec_script = f"<script>copyToClipboard('{sanitized_text}');</script>"
+                            
+                            # Write both scripts
+                            st.write(js_code, unsafe_allow_html=True)
+                            st.write(exec_script, unsafe_allow_html=True)
+                            
+                            # Try pyperclip as a fallback
+                            try:
+                                pyperclip.copy(plain_text)
+                            except:
+                                pass
+                                
                             st.toast('✅ Copied to clipboard!')
                         except Exception as e:
                             st.error(f"Failed to copy: {str(e)}")
@@ -258,7 +297,6 @@ Late check outs are not possible and charges may apply."""
         except Exception as e:
             st.error(f"Error finding instructions: {str(e)}")
             return None
-
 
 @dataclass
 class Booking:
