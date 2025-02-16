@@ -30,7 +30,6 @@ from src.utils import create_cognito_link
 ## TODO finish  attribute booking and move higher
 ## TODO find a way to separate 2 x same room diff dates kevinfz example
 
-
 @dataclass
 class CheckInInstructions:
     def __init__(self):
@@ -45,19 +44,25 @@ class CheckInInstructions:
                 st.warning(f"No check-in instructions found for {vendor_name} - {room_name}")
                 return
             
-            plain_text = self._prepare_clipboard_text(instructions)
+            # Create a container for inline elements
+            container = st.container()
             
-            text, button = st.columns([4, 1])
-            with text:
-                st.write("Check-in Instructions")
-            with button:
-                if st.button("📋", help="Copy check-in instructions"):
-                    try:
-                        pyperclip.copy(plain_text)
-                        st.toast('✅ Copied to clipboard!')
-                    except Exception as e:
-                        st.error(f"Failed to copy: {str(e)}")
-                        
+            with container:
+                text, button = st.columns([4, 1])
+                with text:
+                    st.write("Check-in Instructions")
+                with button:
+                    # Generate both plain text and HTML versions
+                    plain_text = self._prepare_clipboard_text(instructions)
+                    html_text = self._prepare_clipboard_html(instructions)
+                    
+                    if st.button("📋", help="Copy check-in instructions"):
+                        try:
+                            # Just use pyperclip for now to avoid JavaScript issues
+                            pyperclip.copy(plain_text)
+                            st.toast('✅ Copied to clipboard!')
+                        except Exception as e:
+                            st.error(f"Failed to copy: {str(e)}")
         except Exception as e:
             st.error(f"Error with check-in instructions: {str(e)}")
 
@@ -252,6 +257,7 @@ Late check outs are not possible and charges may apply."""
         except Exception as e:
             st.error(f"Error finding instructions: {str(e)}")
             return None
+
 
 
 @dataclass
