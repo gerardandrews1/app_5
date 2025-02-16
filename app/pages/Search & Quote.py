@@ -112,6 +112,7 @@ def get_stays_string(auth, hotel_ids_list, checkin, checkout, guests):
         # avail_hotels_two = requests.get(list_avail_two, auth = auth)
 
         resp_dict = json.loads(avail_hotels.text)
+        # st.write(resp_dict)
 
         resp_lists.append(resp_dict)
         # stays_string_two = json.loads(avail_hotels_two.text)
@@ -269,13 +270,14 @@ if "No" in unbookable:
     df_selection = df_selection[~df_selection["Hotel Name"].isin(unbookable_list)]
 
 
-df_selection = df_selection[df_selection["Rate Plan"] != "HN OTA"]
+df_selection = df_selection[df_selection["Rate Plan"] != "HN 25/26"]
 
 df_selection["hotel_room_name"] = df_selection["Hotel Name"] + \
                                         " " + df_selection["Room Name"]
 
 df_selection["Commission"] = np.where(df_selection["Managed By"] == "HN",
                                       df_selection.Price * 0.25, df_selection.Price * 0.2)
+
 df_selection["Commission"] = df_selection["Commission"].astype(int)
 
 df_selection["Per Night"] = df_selection["Price"].astype(int) / st.session_state.nights

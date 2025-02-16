@@ -6,13 +6,17 @@ import datetime
 import json
 import os
 import pandas as pd
+import pyperclip
+
 import requests
 import numpy as np
 import streamlit as st
+from typing import Dict, Optional, Any
 
 
 from ratelimit import limits, sleep_and_retry
 from dataclasses import dataclass, asdict
+from urllib.parse import urlencode
 # from src.utils import highlight_unpaid
 from src.utils import set_management_variable
 from src.utils import get_cognito_sheet_data
@@ -25,6 +29,235 @@ from src.utils import create_cognito_link
 ## TODO get min checkin and max check-out date for email subject 
 ## TODO finish  attribute booking and move higher
 ## TODO find a way to separate 2 x same room diff dates kevinfz example
+
+
+@dataclass
+class CheckInInstructions:
+    def __init__(self):
+        self.instructions = st.secrets.get("property_instructions", {})
+        
+    def write_instructions(self, vendor_name: str, room_name: Optional[str] = None) -> None:
+        """Write minimal check-in instructions UI with copy button"""
+        try:
+            instructions = self._find_instructions(vendor_name, room_name)
+            
+            if not instructions:
+                st.warning(f"No check-in instructions found for {vendor_name} - {room_name}")
+                return
+            
+            # Create a container for inline elements
+            container = st.container()
+            
+            with container:
+                text, button = st.columns([4, 1])
+                with text:
+                    st.write("Check-in Instructions")
+                with button:
+                    # Generate both plain text and HTML versions
+                    plain_text = self._prepare_clipboard_text(instructions)
+                    html_text = self._prepare_clipboard_html(instructions)
+                    
+                    if st.button("📋", help="Copy check-in instructions"):
+                        try:
+                            # Just use pyperclip for now to avoid JavaScript issues
+                            pyperclip.copy(plain_text)
+                            st.toast('✅ Copied to clipboard!')
+                        except Exception as e:
+                            st.error(f"Failed to copy: {str(e)}")
+        except Exception as e:
+            st.error(f"Error with check-in instructions: {str(e)}")
+
+    def _format_address(self, address: str) -> str:
+        """Format address into two lines based on common patterns"""
+        if not address:
+            return ""
+            
+        # Split at the last occurrence of comma before "Hokkaido"
+        parts = address.split(", ")
+        if "Hokkaido" in address:
+            street_parts = []
+            prefecture_parts = []
+            found_hokkaido = False
+            
+            for part in parts:
+                if "Hokkaido" in part or found_hokkaido:
+                    found_hokkaido = True
+                    prefecture_parts.append(part)
+                else:
+                    street_parts.append(part)
+                    
+            line1 = ", ".join(street_parts)
+            line2 = ", ".join(prefecture_parts)
+            
+            return f"{line1}\n{line2}"
+            
+        # Fallback if no Hokkaido in address
+        if len(parts) > 1:
+            return f"{', '.join(parts[:-1])}\n{parts[-1]}"
+            
+        return address
+
+    def _format_access_instructions_html(self, instructions: Dict[str, Any]) -> str:
+        """Format access instructions section based on available information"""
+        # Check for special check-in/out instructions first
+        check_in = instructions.get('checkInInstructions')
+        check_out = instructions.get('checkOutInstructions')
+        
+        if check_in or check_out:
+            instructions_html = []
+            if check_in:
+                instructions_html.append(f"""
+                <p><strong>Check-in Instructions:</strong><br>
+                {check_in}</p>
+                """)
+            if check_out:
+                instructions_html.append(f"""
+                <p><strong>Check-out Instructions:</strong><br>
+                {check_out}</p>
+                """)
+            return ''.join(instructions_html)
+        
+        # Handle door codes
+        exterior_code = instructions.get('exteriorDoorCode')
+        unit_code = instructions.get('doorCode')
+        
+        if not unit_code and not exterior_code:
+            return ""
+            
+        if exterior_code:
+            return f"""
+            <p><strong>Door Codes:</strong><br>
+            Building Entry: {exterior_code}<br>
+            Unit Entry: {unit_code}</p>
+            """
+        else:
+            return f"""
+            <p><strong>Door Code:</strong><br>
+            {unit_code}</p>
+            """
+
+    def _format_access_instructions_text(self, instructions: Dict[str, Any]) -> str:
+        """Format access instructions section for plain text"""
+        # Check for special check-in/out instructions first
+        check_in = instructions.get('checkInInstructions')
+        check_out = instructions.get('checkOutInstructions')
+        
+        if check_in or check_out:
+            instructions_text = []
+            if check_in:
+                instructions_text.append(f"""Check-in Instructions:
+{check_in}""")
+            if check_out:
+                instructions_text.append(f"""
+Check-out Instructions:
+{check_out}""")
+            return '\n'.join(instructions_text)
+        
+        # Handle door codes
+        exterior_code = instructions.get('exteriorDoorCode')
+        unit_code = instructions.get('doorCode')
+        
+        if not unit_code and not exterior_code:
+            return ""
+            
+        if exterior_code:
+            return f"""Door Codes:
+Building Entry: {exterior_code}
+Unit Entry: {unit_code}"""
+        else:
+            return f"""Door Code:
+{unit_code}"""
+
+    def _prepare_clipboard_html(self, instructions: Dict[str, Any]) -> str:
+        """Format instructions as HTML for rich clipboard content"""
+        access_instructions = self._format_access_instructions_html(instructions)
+        formatted_address = self._format_address(instructions.get('address', ''))
+        
+        html = [
+            "<div style='font-family: Arial, sans-serif; line-height: 1.6;'>",
+            f"<p><strong>Please see the entry details for:</strong> {instructions.get('name')} - {instructions.get('description', '')}</p>",
+            access_instructions,
+            "<p><strong>Address:</strong><br>",
+            formatted_address.replace('\n', '<br>'),
+            "</p>",
+            f"<p><strong>Map Code:</strong><br>",
+            f"{instructions.get('mapCode', '')}</p>",
+            "<p><strong>Google Maps:</strong><br>",
+            f"<a href='{instructions.get('googleMaps', '')}'>{instructions.get('googleMaps', '')}</a></p>",
+            "<p><strong>Parking:</strong><br>",
+            f"{instructions.get('parking', '')}</p>",
+            "<p><strong>Important Notes:</strong><br>",
+            "If arriving after 11pm this must be communicated in advance.</p>",
+            "<p><strong>Contact Information:</strong><br>",
+            "Email: <a href='mailto:frontdesk@holidayniseko.com'>frontdesk@holidayniseko.com</a><br>",
+            "Tel: +81-136-21-6221 (08:30 - 18:30)<br>",
+            "Tel: +81-80-6910-7502 (18:30 - 23:00)<br>",
+            "Emergency Only: +81-80-6066-6891 (charges apply for non-emergency calls)</p>",
+            "<p><strong>Check-in/Check-out Times:</strong><br>",
+            "Check in at 15:00 or after and Check out at 10:00am<br>",
+            "Late check outs are not possible and charges may apply.</p>",
+            "</div>"
+        ]
+        
+        return ''.join(html)
+
+    def _prepare_clipboard_text(self, instructions: Dict[str, Any]) -> str:
+        """Format instructions for plain text clipboard"""
+        access_instructions = self._format_access_instructions_text(instructions)
+        formatted_address = self._format_address(instructions.get('address', ''))
+        
+        text = f"""Please see the entry details for: {instructions.get('name')} - {instructions.get('description', '')}
+
+{access_instructions}
+
+Address:
+{formatted_address}
+
+Map Code:
+{instructions.get('mapCode', '')}
+
+Google Maps:
+{instructions.get('googleMaps', '')}
+
+Parking:
+{instructions.get('parking', '')}
+
+Important Notes:
+If arriving after 11pm this must be communicated in advance.
+
+Contact Information:
+Email: frontdesk@holidayniseko.com
+Tel: +81-136-21-6221 (08:30 - 18:30)
+Tel: +81-80-6910-7502 (18:30 - 23:00)  
+
+Emergency Only: +81-80-6066-6891 (charges apply for non-emergency calls)
+
+Check-in/Check-out Times:
+Check in at 15:00 or after and Check out at 10:00am
+Late check outs are not possible and charges may apply."""
+
+        return text.strip()
+
+    def _find_instructions(self, vendor_name: str, room_name: Optional[str]) -> Optional[Dict[str, Any]]:
+        """Find instructions by matching vendor and room to TOML key"""
+        try:
+            vendor_key = vendor_name.upper().replace(" ", "_")
+            
+            if room_name and "#" in room_name:
+                base_name, room_number = room_name.split("#")
+                room_number = f"#{room_number.strip()}"
+                base_name = base_name.strip()
+                room_key = base_name.upper().replace(" ", "_") + "_" + room_number
+            else:
+                room_key = room_name.upper().replace(" ", "_") if room_name else ""
+                
+            search_key = f"{vendor_key}_{room_key}"
+            
+            return next((value for key, value in self.instructions.items() 
+                        if search_key in key), None)
+        except Exception as e:
+            st.error(f"Error finding instructions: {str(e)}")
+            return None
 
 
 @dataclass
@@ -747,6 +980,193 @@ class Booking:
 
         pass
 
+
+    def write_booking_confirmation(self):
+        """Write the OTA email after they contact us"""
+        try: 
+            if self.guest_email == "" or "booking.com" in self.guest_email:
+                pass        
+            else:
+                bk_confirmation_expander = st.expander(
+                    f"Booking Confirmation #{self.eId}",
+                    expanded=False)
+                
+                with bk_confirmation_expander:
+                    # CSS styling
+                    st.markdown("""
+                        <style>
+                        .streamlit-expanderContent {
+                            white-space: nowrap !important;
+                        }
+                        .element-container {
+                            white-space: nowrap !important;
+                        }
+                        .table-wrapper {
+                            width: 350px;
+                            border: 1px solid #e0e0e0;
+                            border-top: 4px solid #0C8C3C;
+                            background: white;
+                            padding: 0;
+                            margin: 0;
+                            white-space: nowrap;
+                        }
+                        table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            font-size: 14px;
+                        }
+                        .header-row {
+                            background: white;
+                            border-bottom: 1px solid #e0e0e0;
+                        }
+                        .header-cell {
+                            padding: 15px;
+                            color: #333;
+                        }
+                        .header-title {
+                            font-size: 16px;
+                            font-weight: 500;
+                            margin: 0 0 5px 0;
+                        }
+                        .booking-id {
+                            color: #000000;
+                            font-size: 14px;
+                            margin: 0 0 10px 0;
+                        }
+                        .login-button {
+                            display: inline-block;
+                            background-color: #FFB800;
+                            color: #000000;
+                            padding: 6px 12px;
+                            text-decoration: none;
+                            border-radius: 4px;
+                            font-weight: 600;
+                            font-size: 13px;
+                        }
+                        th, td {
+                            padding: 10px;
+                            text-align: left;
+                            border: 1px solid #e0e0e0;
+                        }
+                        th {
+                            width: 100px;
+                            font-weight: 500;
+                            color: #333;
+                            background: white;
+                        }
+                        td {
+                            background: white;
+                        }
+                        </style>
+                    """, unsafe_allow_html=True)
+
+                    # Header section
+                    st.markdown(f"""
+                    Booking Confirmation #{self.eId} - {self.vendor}  
+                                        
+                    Hi {self.given_name},
+
+                    Thank you for choosing Holiday Niseko! We're delighted to confirm your booking with us.
+                    
+                    Please take a moment to review your booking confirmation below to ensure everything is correct.
+                    
+                    **To secure your booking a 20% non-refundable deposit is required within 3 days**  
+                      
+                     
+
+                    """, unsafe_allow_html=True)
+
+                    # Generate tables for all rooms
+                    for booking in self.booking_dict:
+                        if booking.get('bookingType') == 'ACCOMMODATION':
+                            for room in booking.get('items', []):
+                                vendor = booking.get('hotel', {}).get('hotelName', '')
+                                room_name = room.get('roomType', {}).get('roomTypeName', '')
+                                check_in = pd.to_datetime(room.get('checkIn', '')).strftime('%b %d, %Y')
+                                check_out = pd.to_datetime(room.get('checkOut', '')).strftime('%b %d, %Y')
+                                nights = (pd.to_datetime(room.get('checkOut', '')) - pd.to_datetime(room.get('checkIn', ''))).days
+                                guests = room.get('numberGuests', 0)
+                                rate = f"¥{room.get('priceRetail', 0):,.0f}"
+                                eid = booking.get('eId', '')
+
+                                # Create URL-encoded parameters for the my-booking link
+                                from urllib.parse import urlencode
+                                params = {
+                                    'email': self.guest_email,
+                                    'reservation_eid': eid
+                                }
+                                
+                                # Create the URL with parameters
+                                my_booking_url = f"https://holidayniseko.com/my-booking?{urlencode(params)}"
+
+                                
+                                table_html = f"""
+                                <table class="table-wrapper">
+                                    <tr class="header-row">
+                                        <td colspan="2" class="header-cell">
+                                            <div class="booking-id">Booking ID: {eid}</div>
+                                            <a href="{my_booking_url}" class="login-button">Login to MyBooking</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th>Property</th>
+                                        <td>{vendor}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Room</th>
+                                        <td>{room_name}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Check-in</th>
+                                        <td>{check_in}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Check-out</th>
+                                        <td>{check_out}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Nights</th>
+                                        <td>{nights}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Guests</th>
+                                        <td>{guests}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Rate</th>
+                                        <td>{rate}</td>
+                                    </tr>
+                                </table>
+                                <br>
+                                """
+                                
+                                st.markdown(table_html, unsafe_allow_html=True)
+
+                    # Footer section
+                    st.markdown(f"""
+                    **Payment Information**
+                    - Initial deposit: 20% (due within 3 days)
+                    - Final balance: Due 60 days before check-in  
+                    
+                     <a href="https://holidayniseko.evoke.jp/public/yourbooking.jsf?id={self.eId}&em={self.guest_email}">Pay securely in your local currency here</a>
+
+                    *We've partnered with Flywire to offer payments in your local currency, reducing exchange fees while we receive payment in JPY.*
+
+                    **Important Links**
+                    - <a href="https://holidayniseko.com/terms-and-conditions"> Terms and Conditions</a>
+                    - <a href="https://holidayniseko2.evoke.jp/public/booking/order02.jsf?mv=1&vs=WinterGuestServices&bookingEid={self.eId}">Book Guest Services (transfers, rentals, lessons)</a>
+                    - 
+                    - <a href="https://holidayniseko.com/sites/default/files/services/2024-08/Holiday%20Niseko%20Guest%20Service%20Guide%202024_2025.pdf">2023/24 Guest Services Guide for reference only - to be updated for winter 2024/25</a>
+                    - <a href="https://holidayniseko.com/faq">FAQ</a>
+                    - <a href="https://holidayniseko.com/my-booking">Login to MyBooking to check your details anytime</a>
+
+
+                    *We recommend securing travel insurance to protect your booking.*
+                    """, unsafe_allow_html=True)
+                        
+        except Exception as e:
+            st.error(f"Error in write_booking_confirmation: {str(e)}")
+
     def write_links_box(self):
 
         """Writes the expandable links box to the bottom
@@ -1135,3 +1555,38 @@ class Booking:
                 st.write("Check-out is today!")
             else:
                 st.write(f"Currently staying: {days_after_checkout+1} days until check-out")
+
+
+    def write_checkin_instructions(self):
+        """Write check-in instructions for the accommodation"""
+        try:
+            if not hasattr(self, '_checkin_instructions'):
+                self._checkin_instructions = CheckInInstructions()
+            
+            if not hasattr(self, 'vendor'):
+                st.warning("Unable to find property information for check-in instructions")
+                return
+            
+            # Get the first room's name
+            room_name = None
+            if hasattr(self, 'rooms_booked') and self.rooms_booked:
+                first_room = self.rooms_booked[0]
+                if isinstance(first_room, dict) and 'roomType' in first_room:
+                    room_type = first_room.get('roomType', {})
+                    if isinstance(room_type, dict):
+                        room_name = room_type.get('roomTypeName')
+            
+            # Debug information
+            # st.write("DEBUG: Booking Information")
+            # st.write(f"Vendor: {self.vendor}")
+            # st.write(f"Room Name: {room_name}")
+            
+            self._checkin_instructions.write_instructions(self.vendor, room_name)
+            
+        except Exception as e:
+            st.error(f"Error in write_checkin_instructions: {str(e)}")
+            import traceback
+            st.write("Full error traceback:")
+            st.code(traceback.format_exc())
+
+        

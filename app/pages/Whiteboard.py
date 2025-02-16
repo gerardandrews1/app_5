@@ -1,113 +1,164 @@
-        # Dashboard for high level business metrics.
-# TODO want to figure out a better way to build db
-# perhaps a loop, but difficult to include metrics
-
-import calendar
-import datetime
-import gspread
-import matplotlib.dates as mdates
-import matplotlib.pyplot as plt
-import numpy as np
-import os
-import pandas as pd
-
-import requests
 import streamlit as st
-import time
+import requests
+import json
+from datetime import datetime
+import base64
 
-from dotenv import load_dotenv
-from ratelimit import limits
+# Page config
+st.set_page_config(page_title="RoomBoss Package API Tester", layout="wide")
 
+def format_date(date_str):
+    if not date_str:
+        return ""
+    try:
+        dt = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
+    except:
+        return date_str
 
-from src.utils import load_csv_data
-from src.utils import create_otd_df
-from src.utils import month_splits_2324
-from src.utils import clean_accom_df
-from src.utils import build_bullet
-
-# Page and variable setup
-st.set_page_config(page_title = "Whiteboard",
-                   layout="wide")
-
-load_dotenv()
-
-api_id = os.getenv('api_id')
-api_key = os.getenv('api_key')
-
-
-
-def get_cognito_entry(entry_number):
+def get_package_details(identifier, id_type="package"):
+    """Fetch package details from the API"""
+    base_url = "https://api.roomboss.com/extws/gs/v1/package"
     
-    api_key = st.secrets["cognito_api_key"]
-
-    url = f"https://www.cognitoforms.com/api/forms/14/entries/{entry_number}?access_token={api_key}"
-
-    response = requests.get(url)
-    st.write(response.json())
-    return response.json()
-
-
-
-# decorator to throttle api calls 
-@limits(calls = 15, period = 120)
-def call_gs_api(ebook_id, api_id, api_key):
+    # Get credentials from secrets and create Basic Auth
+    credentials = f"{st.secrets.api_id}:{st.secrets.api_key}"
+    encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
     
-    """
-    Call API with wrapper only 15 calls
-    per 2 min limit imposed
-    Using API credentials
-
-    """
-
-
-    url = "https://api.roomboss.com/vendors/list?countryCode=JP&locationCode=NISEKO&lang=en"
-
-
-    # response = requests.request("GET", url, headers=headers, data=payload)
-
+    # Print debug info
+    st.sidebar.write("API ID:", st.secrets.api_id)
+    st.sidebar.write("API Key:", st.secrets.api_key)
     
+    headers = {
+        "Authorization": f"Basic {encoded_credentials}",
+        "Content-Type": "application/json"
+    }
     
-    auth = (api_id, api_key)
-
-    # response = requests.get(url, auth = auth, headers = {})
-
-    payload={}
-    headers = {}
-
-    response = requests.request("GET", url, headers=headers, data=payload)
-
-
-
-    if response.status_code != 200:
-        st.write(f"{response.reason}\
-                 {response.status_code}, check input")
+    params = {
+        "packageId" if id_type == "package" else "bookingEid": identifier,
+        "lang": "en"
+    }
+    
+    try:
+        # Build complete URL for debugging
+        complete_url = f"{base_url}?{requests.compat.urlencode(params)}"
+        st.write("API URL being called:", complete_url)
         
-    st.write(response.text)
-
-    return response
-
-def get_gsheet_data():
+        response = requests.get(base_url, headers=headers, params=params)
         
-    gc = gspread.service_account()
+        # Always show the complete response
+        st.write("Complete Response Details:")
+        st.write("Status Code:", response.status_code)
+        st.write("Response Headers:", dict(response.headers))
+        try:
+            json_response = response.json()
+            st.json(json_response)
+        except:
+            st.write("Raw Response Content:", response.text)
+            
+        if response.status_code != 200:
+            response.raise_for_status()
+            
+        return json_response
+    except requests.exceptions.RequestException as e:
+        st.error(f"Error fetching data: {str(e)}")
+        return None
 
-    # Open google sheets
-    sh = gc.open("All Bookings")
-
-    # clear today sheet and update data
-    cognito_sheet = sh.get_worksheet(2)
+# Sidebar for input
+with st.sidebar:
+    st.title("Search Options")
+    search_type = st.radio("Search by:", ["Package ID", "Booking ID"])
+    identifier = st.text_input("Enter ID", value="2050856")
     
-    data = cognito_sheet.get_all_values()
-    headers = data.pop(0)
-    df = pd.DataFrame(data, columns=headers)
+    if st.button("Search"):
+        if identifier:
+            id_type = "package" if search_type == "Package ID" else "booking"
+            data = get_package_details(identifier, id_type)
+            if data:
+                st.session_state.api_response = data
+        else:
+            st.warning("Please enter an ID")
 
-    return df
+# Main content area
+st.title("RoomBoss Package API Tester")
 
-def get_cognito_info(ebook_id, df):
+if 'api_response' in st.session_state:
+    data = st.session_state.api_response
+    
+    # Show raw JSON response
+    with st.expander("Raw JSON Response", expanded=True):
+        st.json(data)
+    
+    # Package Overview
+    st.header("Package Overview")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Package ID", data.get('package', {}).get('id', 'N/A'))
+    with col2:
+        st.metric("Total Amount", f"{data.get('package', {}).get('totalAmount', 0)} {data.get('package', {}).get('currencyCode', '')}")
+    with col3:
+        st.metric("Received Amount", f"{data.get('package', {}).get('receivedAmount', 0)} {data.get('package', {}).get('currencyCode', '')}")
 
-    result = df.loc[df["HolidayNisekoReservationNumber"] == ebook_id]
-    st.write(result)
-# get_cognito_entry()
+    # Company Info
+    st.subheader("Company Information")
+    st.json({
+        "Company Name": data.get('package', {}).get('companyName', ''),
+        "Email": data.get('package', {}).get('companyEmail', ''),
+        "Phone": data.get('package', {}).get('companyPhone', '')
+    })
 
-# call_gs_api(1694617, api_id, api_key)
+    # Bookings
+    st.header("Bookings")
+    bookings = data.get('package', {}).get('bookings', [])
+    for idx, booking in enumerate(bookings):
+        with st.expander(f"Booking {idx + 1} - ID: {booking.get('bookingId', 'N/A')}"):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write("Basic Information")
+                st.json({
+                    "Booking ID": booking.get('bookingId'),
+                    "Custom ID": booking.get('customId'),
+                    "Status": "Active" if booking.get('active') else "Cancelled",
+                    "Type": booking.get('bookingType'),
+                    "Source": booking.get('bookingSource'),
+                    "Created": format_date(booking.get('createdDate')),
+                    "Last Modified": format_date(booking.get('lastModifiedDate'))
+                })
+            
+            with col2:
+                if booking.get('serviceProvider'):
+                    st.write("Service Provider")
+                    st.json(booking['serviceProvider'])
+            
+            if booking.get('items'):
+                st.write("Booking Items")
+                for item in booking['items']:
+                    st.json(item)
 
-get_cognito_entry(14)
+    # Invoice Payments
+    st.header("Invoice & Payments")
+    payments = data.get('package', {}).get('invoicePayments', [])
+    for payment in payments:
+        with st.expander(f"Invoice {payment.get('invoiceNumber', 'N/A')}"):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write("Invoice Details")
+                st.json({
+                    "Invoice Number": payment.get('invoiceNumber'),
+                    "Amount": payment.get('invoiceAmount'),
+                    "Due Date": payment.get('invoiceDueDate'),
+                    "Created By": payment.get('invoiceCreatedBy'),
+                    "Created Date": payment.get('invoiceCreatedDate')
+                })
+            
+            with col2:
+                st.write("Payment Details")
+                st.json({
+                    "Payment ID": payment.get('paymentId'),
+                    "Amount": payment.get('paymentAmount'),
+                    "Method": payment.get('paymentMethod'),
+                    "Date": payment.get('paymentDate'),
+                    "Created By": payment.get('paymentCreatedBy')
+                })
+
+else:
+    st.info("Enter a Package ID or Booking ID in the sidebar to fetch data")

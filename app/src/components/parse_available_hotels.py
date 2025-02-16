@@ -113,11 +113,13 @@ class RbAvailableHotel:
 
                     457905: "HN standard",
                     444942: "HN OTA",
+                    507323: "HN Early Bird",
+                    511129: "HN 25/26",
 
                     444506: "Chat standard",
                     
                     460349 : "NISADE Standard",
-                    460468 :  "NISADE EB",
+                    460468 : "NISADE EB",
                     
                     484750 : "NISADE EB & 9+ nights",
 

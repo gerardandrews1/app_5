@@ -2,3 +2,4 @@ ratelimit
 matplotlib
 python-dotenv
 gspread
+pyperclip

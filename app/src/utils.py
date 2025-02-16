@@ -474,28 +474,37 @@ def create_otd_df(df, metric):
     new_df = pd.DataFrame()
 
     # This creates an on this day dataframe 
-    for key, value in years.items():
 
-        today_str = key + datetime.datetime.today().strftime('%Y-%m-%d')[4:]
+        
 
-        today_df = df[df.Season == value]
+        
 
-        today_date = pd.to_datetime(today_str)
-
-        today_df = today_df[today_df.Created <= today_date]
+        
 
 
         # today_gb = today_df.groupby("Season")[metric].sum().reset_index().sort_values(by = "Season",ascending = True)
+        # new_df = pd.concat([new_df, today_df])
 
-        new_df = pd.concat([new_df, today_df])
+    today_df = df[df.Season == "'23/24'"]
 
-
-
-    new_df.iloc[3, 1] = 0 # Sets the value for 24/25 to 0 so it doesn't draw over the top
-    # To make the graph make sense
-    new_df.sort_values(by = "Season", ascending = False, inplace = True)
+    today_str = "2024" + datetime.datetime.today().strftime('%Y-%m-%d')[4:]
     
-    return new_df
+    today_date = pd.to_datetime(today_str)
+
+    today_df = today_df[today_df.Created <= today_date]
+
+    # Sort first
+    today_df.sort_values(by="Season", ascending=False, inplace=True)
+
+    st.write("TODAY",today_df)
+    
+    # # Only set to 0 if we have that season
+    # season_24_25 = new_df[new_df.Season == "'24/25'"]
+    # if not season_24_25.empty:
+    #     new_df.loc[new_df.Season == "'24/25'", metric] = 0
+
+    return today_df
+    
 
 
 @st.cache_data

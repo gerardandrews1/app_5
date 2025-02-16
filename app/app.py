@@ -1,3 +1,4 @@
+# app.py
 # app homepage to list booking details 
 
 import datetime
@@ -95,6 +96,8 @@ if user_input:
         with row1[2]: 
             
             with st.container():
+                bk.write_booking_confirmation()
+
                 bk.write_email_subject()
                 bk.write_gsg_upsell()
                 bk.write_first_ota_email()
@@ -110,8 +113,10 @@ if user_input:
         with row0[2]:
             with st.container():
                 st.markdown("##### Check-in")
+                bk.write_checkin_instructions()
                 bk.write_cognito()
                 bk.write_days_to_checkin()
+                
                 # bk.write_booking_info()
 
 

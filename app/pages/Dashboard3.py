@@ -92,7 +92,9 @@ all_books_df = clean_accom_df(all_books_df, "Check In / Start",
 
 all_books_accom = all_books_df[all_books_df["accom_flag"] == 1]
 otd_all_books = create_otd_df(all_books_df, "Gross")
+st.write(otd_all_books)
 otd_all_books = otd_all_books.query("accom_flag == 1")
+
 
 all_books_accom_2425 = all_books_accom.query(query_2425)
 all_books_accom_2324 = all_books_accom.query(query_2324)
@@ -338,7 +340,8 @@ def season_metrics():
     gs_sell_2425 = gs_df.query(query_2425)["Item Sell Price"].sum()
     gs_sell_2324 = gs_df.query(query_2324)["Item Sell Price"].sum()
     gs_sell_otd = otd_gs_df.query(query_2324)["Item Sell Price"].sum()
-
+    st.write("GS OTD")
+    st.write(gs_sell_otd)
 
 
 
