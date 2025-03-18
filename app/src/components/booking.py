@@ -11,7 +11,7 @@ import pyperclip
 import requests
 import numpy as np
 import streamlit as st
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, Union, List
 
 
 from ratelimit import limits, sleep_and_retry
@@ -31,6 +31,7 @@ from src.utils import create_cognito_link
 ## TODO find a way to separate 2 x same room diff dates kevinfz example
 
 
+
 @dataclass
 class CheckInInstructions:
     def __init__(self):
@@ -48,30 +49,27 @@ class CheckInInstructions:
             plain_text = self._prepare_clipboard_text(instructions)
             sanitized_text = plain_text.split("Kind regards")[0].strip()
             
-            # Create a container to maintain consistent width
             container = st.container()
             
             with container:
-                # Header row with copy button
-                # text, button = st.columns([4, 1])
-                # with text:
-                # st.write("Check-in Instructions")
-                # with button:
                 if st.button("Check-in Instructions", help="Copy check-in instructions"):
-                        # Show text in an expander under the same container
                     with st.expander("Instructions", expanded=True):
                         st.code(sanitized_text)
-                        # st.toast('✅ Ready to copy')
                         
         except Exception as e:
             st.error(f"Error with check-in instructions: {str(e)}")
+
+    def _format_code_instructions(self, code: Union[str, List[str]]) -> str:
+        """Format door code instructions, handling both string and list inputs"""
+        if isinstance(code, list):
+            return "\n".join(code)
+        return str(code)
 
     def _format_address(self, address: str) -> str:
         """Format address into two lines based on common patterns"""
         if not address:
             return ""
             
-        # Split at the last occurrence of comma before "Hokkaido"
         parts = address.split(", ")
         if "Hokkaido" in address:
             street_parts = []
@@ -90,7 +88,6 @@ class CheckInInstructions:
             
             return f"{line1}\n{line2}"
             
-        # Fallback if no Hokkaido in address
         if len(parts) > 1:
             return f"{', '.join(parts[:-1])}\n{parts[-1]}"
             
@@ -98,25 +95,23 @@ class CheckInInstructions:
 
     def _format_access_instructions_html(self, instructions: Dict[str, Any]) -> str:
         """Format access instructions section based on available information"""
-        # Check for special check-in/out instructions first
         check_in = instructions.get('checkInInstructions')
         check_out = instructions.get('checkOutInstructions')
         
         if check_in or check_out:
             instructions_html = []
             if check_in:
-                instructions_html.append(f"""
-                <p><strong>Check-in Instructions:</strong><br>
-                {check_in}</p>
-                """)
+                instructions_html.append(
+                    "<p><strong>Check-in Instructions:</strong><br>"
+                    f"{check_in}</p>"
+                )
             if check_out:
-                instructions_html.append(f"""
-                <p><strong>Check-out Instructions:</strong><br>
-                {check_out}</p>
-                """)
+                instructions_html.append(
+                    "<p><strong>Check-out Instructions:</strong><br>"
+                    f"{check_out}</p>"
+                )
             return ''.join(instructions_html)
         
-        # Handle door codes
         exterior_code = instructions.get('exteriorDoorCode')
         unit_code = instructions.get('doorCode')
         
@@ -124,35 +119,33 @@ class CheckInInstructions:
             return ""
             
         if exterior_code:
-            return f"""
-            <p><strong>Door Codes:</strong><br>
-            Building Entry: {exterior_code}<br>
-            Unit Entry: {unit_code}</p>
-            """
+            formatted_exterior = self._format_code_instructions(exterior_code)
+            formatted_unit = self._format_code_instructions(unit_code)
+            return (
+                "<p><strong>Entry Instructions:</strong><br>"
+                f"Building Entry:<br>{formatted_exterior.replace(chr(10), '<br>')}<br>"
+                f"Unit Entry:<br>{formatted_unit.replace(chr(10), '<br>')}</p>"
+            )
         else:
-            return f"""
-            <p><strong>Door Code:</strong><br>
-            {unit_code}</p>
-            """
+            formatted_code = self._format_code_instructions(unit_code)
+            return (
+                "<p><strong>Entry Instructions:</strong><br>"
+                f"{formatted_code.replace(chr(10), '<br>')}</p>"
+            )
 
     def _format_access_instructions_text(self, instructions: Dict[str, Any]) -> str:
         """Format access instructions section for plain text"""
-        # Check for special check-in/out instructions first
         check_in = instructions.get('checkInInstructions')
         check_out = instructions.get('checkOutInstructions')
         
         if check_in or check_out:
             instructions_text = []
             if check_in:
-                instructions_text.append(f"""Check-in Instructions:
-{check_in}""")
+                instructions_text.append(f"Check-in Instructions:\n{check_in}")
             if check_out:
-                instructions_text.append(f"""
-Check-out Instructions:
-{check_out}""")
+                instructions_text.append(f"\nCheck-out Instructions:\n{check_out}")
             return '\n'.join(instructions_text)
         
-        # Handle door codes
         exterior_code = instructions.get('exteriorDoorCode')
         unit_code = instructions.get('doorCode')
         
@@ -160,21 +153,26 @@ Check-out Instructions:
             return ""
             
         if exterior_code:
-            return f"""Door Codes:
-Building Entry: {exterior_code}
-Unit Entry: {unit_code}"""
+            formatted_exterior = self._format_code_instructions(exterior_code)
+            formatted_unit = self._format_code_instructions(unit_code)
+            return (
+                f"Entry Instructions:\n"
+                f"Building Entry:\n{formatted_exterior}\n"
+                f"Unit Entry:\n{formatted_unit}"
+            )
         else:
-            return f"""Door Code:
-{unit_code}"""
+            formatted_code = self._format_code_instructions(unit_code)
+            return f"Entry Instructions:\n{formatted_code}"
+
 
     def _prepare_clipboard_html(self, instructions: Dict[str, Any]) -> str:
         """Format instructions as HTML for rich clipboard content"""
         access_instructions = self._format_access_instructions_html(instructions)
         formatted_address = self._format_address(instructions.get('address', ''))
         
-        html = [
+        html_parts = [
             "<div style='font-family: Arial, sans-serif; line-height: 1.6;'>",
-            f"<p><strong>Please see the entry details for:</strong> {instructions.get('name')} - {instructions.get('description', '')}</p>",
+            f"<p><strong>Please see the entry details for</strong> {instructions.get('name')} - {instructions.get('description', '')}</p>",
             access_instructions,
             "<p><strong>Address:</strong><br>",
             formatted_address.replace('\n', '<br>'),
@@ -185,56 +183,64 @@ Unit Entry: {unit_code}"""
             f"<a href='{instructions.get('googleMaps', '')}'>{instructions.get('googleMaps', '')}</a></p>",
             "<p><strong>Parking:</strong><br>",
             f"{instructions.get('parking', '')}</p>",
-            "<p><strong>Important Notes:</strong><br>",
-            "If arriving after 11pm this must be communicated in advance.</p>",
+            "If you're arriving after 11pm this must be communicated in advance.</p>",
+            "<p><strong>Please Note:</strong><br>",
+            "If you have not already completed the online check-in please do so here:<br>",
+            "<a href='https://holidayniseko.com/welcome'>https://holidayniseko.com/welcome</a></p>",
             "<p><strong>Contact Information:</strong><br>",
             "Email: <a href='mailto:frontdesk@holidayniseko.com'>frontdesk@holidayniseko.com</a><br>",
             "Tel: +81-136-21-6221 (08:30 - 18:30)<br>",
             "Tel: +81-80-6910-7502 (18:30 - 23:00)<br>",
             "Emergency Only: +81-80-6066-6891 (charges apply for non-emergency calls)</p>",
             "<p><strong>Check-in/Check-out Times:</strong><br>",
-            "Check in at 15:00 or after and Check out at 10:00am<br>",
+            "Check in is at 15:00 or after and Check out at 10:00am<br>",
             "Late check outs are not possible and charges may apply.</p>",
             "</div>"
         ]
         
-        return ''.join(html)
+        return ''.join(html_parts)
 
     def _prepare_clipboard_text(self, instructions: Dict[str, Any]) -> str:
         """Format instructions for plain text clipboard"""
         access_instructions = self._format_access_instructions_text(instructions)
         formatted_address = self._format_address(instructions.get('address', ''))
         
-        text = f"""Please see the entry details for: {instructions.get('name')} - {instructions.get('description', '')}
-
-{access_instructions}
-Address:
-{formatted_address}
-
-Map Code:
-{instructions.get('mapCode', '')}
-
-Google Maps:
-{instructions.get('googleMaps', '')}
-
-Parking:
-{instructions.get('parking', '')}
-
-Important Notes:
-If arriving after 11pm this must be communicated in advance.
-
-Contact Information:
-Email: frontdesk@holidayniseko.com
-Tel: +81-136-21-6221 (08:30 - 18:30)
-Tel: +81-80-6910-7502 (18:30 - 23:00)  
-
-Emergency Only: +81-80-6066-6891 (charges apply for non-emergency calls)
-
-Check-in/Check-out Times:
-Check in at 15:00 or after and Check out at 10:00am
-Late check outs are not possible and charges may apply."""
-
-        return text.strip()
+        text_parts = [
+            f"Please see the entry details for {instructions.get('name')} - {instructions.get('description', '')}",
+            "",
+            access_instructions,
+            "",
+            "Address:",
+            formatted_address,
+            "",
+            "Map Code:",
+            instructions.get('mapCode', ''),
+            "",
+            "Google Maps:",
+            instructions.get('googleMaps', ''),
+            "",
+            "Parking:",
+            instructions.get('parking', ''),
+            "",
+            "If you're arriving after 11pm this must be communicated in advance.",
+            "",
+            "Please Note:",
+            "If you have not already completed the online check-in please do so here:",
+            "https://holidayniseko.com/welcome",
+            "",
+            "Contact Information:",
+            "Email: frontdesk@holidayniseko.com",
+            "Tel: +81-136-21-6221 (08:30 - 18:30)",
+            "Tel: +81-80-6910-7502 (18:30 - 23:00)",
+            "",
+            "Emergency Only: +81-80-6066-6891 (charges apply for non-emergency calls)",
+            "",
+            "Check-in/Check-out Times:",
+            "Check-in is at 15:00 or after and check-out at 10:00am",
+            "Late check outs are not possible and charges may apply."
+        ]
+        
+        return '\n'.join(text_parts)
 
     def _find_instructions(self, vendor_name: str, room_name: Optional[str]) -> Optional[Dict[str, Any]]:
         """Find instructions by matching vendor and room to TOML key"""
@@ -978,9 +984,8 @@ class Booking:
 
         pass
 
-
     def write_booking_confirmation(self):
-        """Write the OTA email after they contact us"""
+        """Write the booking confirmation with multiple rooms in a single table with columns"""
         try: 
             if self.guest_email == "" or "booking.com" in self.guest_email:
                 pass        
@@ -1000,15 +1005,23 @@ class Booking:
                             white-space: nowrap !important;
                         }
                         .table-wrapper {
-                            width: 350px;
                             border: 1px solid #e0e0e0;
                             border-top: 4px solid #0C8C3C;
                             background: white;
                             padding: 0;
-                            margin: 0;
+                            margin: 0 0 20px 0;
                             white-space: nowrap;
+                            overflow-x: auto;
+                            max-width: 100%;
+                            display: inline-block;
                         }
-                        table {
+                        .single-room-table {
+                            width: 350px;
+                        }
+                        .multi-room-table {
+                            width: 100%;
+                        }
+                        .multi-room-table {
                             width: 100%;
                             border-collapse: collapse;
                             font-size: 14px;
@@ -1020,11 +1033,7 @@ class Booking:
                         .header-cell {
                             padding: 15px;
                             color: #333;
-                        }
-                        .header-title {
-                            font-size: 16px;
-                            font-weight: 500;
-                            margin: 0 0 5px 0;
+                            text-align: left;
                         }
                         .booking-id {
                             color: #000000;
@@ -1041,19 +1050,26 @@ class Booking:
                             font-weight: 600;
                             font-size: 13px;
                         }
-                        th, td {
-                            padding: 10px;
-                            text-align: left;
-                            border: 1px solid #e0e0e0;
-                        }
-                        th {
-                            width: 100px;
+                        .property-row th {
                             font-weight: 500;
                             color: #333;
-                            background: white;
+                            background: #f8f8f8;
+                            padding: 10px;
+                            border: 1px solid #e0e0e0;
                         }
-                        td {
+                        .multi-room-table th {
+                            width: 130px;
+                            font-weight: 500;
+                            color: #333;
+                            background: #f8f8f8;
+                            padding: 10px;
+                            border: 1px solid #e0e0e0;
+                        }
+                        .multi-room-table td {
                             background: white;
+                            padding: 10px;
+                            border: 1px solid #e0e0e0;
+                            text-align: center;
                         }
                         </style>
                     """, unsafe_allow_html=True)
@@ -1069,101 +1085,156 @@ class Booking:
                     Please take a moment to review your booking confirmation below to ensure everything is correct.
                     
                     **To secure your booking a 20% non-refundable deposit is required within 3 days**  
-                      
-                     
-
                     """, unsafe_allow_html=True)
 
-                    # Generate tables for all rooms
+                    # Group rooms by booking to display them together
+                    bookings_with_rooms = {}
+                    
                     for booking in self.booking_dict:
                         if booking.get('bookingType') == 'ACCOMMODATION':
+                            booking_id = booking.get('eId', '')
+                            vendor = booking.get('hotel', {}).get('hotelName', '')
+                            
+                            # Create URL-encoded parameters for the my-booking link
+                            from urllib.parse import urlencode
+                            params = {
+                                'email': self.guest_email,
+                                'reservation_eid': booking_id
+                            }
+                            
+                            # Create the URL with parameters
+                            my_booking_url = f"https://holidayniseko.com/my-booking?{urlencode(params)}"
+                            
+                            # Extract all rooms for this booking
+                            rooms = []
                             for room in booking.get('items', []):
-                                vendor = booking.get('hotel', {}).get('hotelName', '')
-                                room_name = room.get('roomType', {}).get('roomTypeName', '')
-                                check_in = pd.to_datetime(room.get('checkIn', '')).strftime('%b %d, %Y')
-                                check_out = pd.to_datetime(room.get('checkOut', '')).strftime('%b %d, %Y')
-                                nights = (pd.to_datetime(room.get('checkOut', '')) - pd.to_datetime(room.get('checkIn', ''))).days
-                                guests = room.get('numberGuests', 0)
-                                rate = f"¥{room.get('priceRetail', 0):,.0f}"
-                                eid = booking.get('eId', '')
-
-                                # Create URL-encoded parameters for the my-booking link
-                                from urllib.parse import urlencode
-                                params = {
-                                    'email': self.guest_email,
-                                    'reservation_eid': eid
-                                }
-                                
-                                # Create the URL with parameters
-                                my_booking_url = f"https://holidayniseko.com/my-booking?{urlencode(params)}"
-
-                                
-                                table_html = f"""
-                                <table class="table-wrapper">
-                                    <tr class="header-row">
-                                        <td colspan="2" class="header-cell">
-                                            <div class="booking-id">Booking ID: {eid}</div>
-                                            <a href="{my_booking_url}" class="login-button">Login to MyBooking</a>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th>Property</th>
-                                        <td>{vendor}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Room</th>
-                                        <td>{room_name}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Check-in</th>
-                                        <td>{check_in}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Check-out</th>
-                                        <td>{check_out}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Nights</th>
-                                        <td>{nights}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Guests</th>
-                                        <td>{guests}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Rate</th>
-                                        <td>{rate}</td>
-                                    </tr>
-                                </table>
-                                <br>
-                                """
-                                
-                                st.markdown(table_html, unsafe_allow_html=True)
-
+                                rooms.append({
+                                    'room_name': room.get('roomType', {}).get('roomTypeName', ''),
+                                    'check_in': pd.to_datetime(room.get('checkIn', '')).strftime('%b %d, %Y'),
+                                    'check_out': pd.to_datetime(room.get('checkOut', '')).strftime('%b %d, %Y'),
+                                    'nights': (pd.to_datetime(room.get('checkOut', '')) - pd.to_datetime(room.get('checkIn', ''))).days,
+                                    'guests': room.get('numberGuests', 0),
+                                    'rate': f"¥{room.get('priceRetail', 0):,.0f}"
+                                })
+                            
+                            bookings_with_rooms[booking_id] = {
+                                'vendor': vendor,
+                                'rooms': rooms,
+                                'my_booking_url': my_booking_url
+                            }
+                    
+                    # Generate tables for each booking
+                    for booking_id, booking_data in bookings_with_rooms.items():
+                        rooms = booking_data['rooms']
+                        vendor = booking_data['vendor']
+                        my_booking_url = booking_data['my_booking_url']
+                        
+                        if not rooms:
+                            continue
+                        
+                        # Start table - use single-room-table class if only one room
+                        table_class = "single-room-table" if len(rooms) == 1 else "multi-room-table"
+                        table_html = f"""
+                        <div class="table-wrapper">
+                            <table class="{table_class}">
+                                <tr class="header-row">
+                                    <td colspan="{len(rooms) + 1}" class="header-cell" style="text-align: left; padding-left: 20px;">
+                                        <div class="booking-id">Booking ID: {booking_id}</div>
+                                        <a href="{my_booking_url}" class="login-button">Login to MyBooking</a>
+                                    </td>
+                                </tr>
+                                <tr class="property-row">
+                                    <th>Property</th>
+                                    <th colspan="{len(rooms)}">{vendor}</th>
+                                </tr>
+                                <tr>
+                                    <th>Room</th>
+                        """
+                        
+                        # Add room name cells
+                        for room in rooms:
+                            table_html += f'<td>{room["room_name"]}</td>'
+                        
+                        # Continue with the rest of the rows
+                        table_html += """
+                                </tr>
+                                <tr>
+                                    <th>Check-in</th>
+                        """
+                        
+                        for room in rooms:
+                            table_html += f'<td>{room["check_in"]}</td>'
+                        
+                        table_html += """
+                                </tr>
+                                <tr>
+                                    <th>Check-out</th>
+                        """
+                        
+                        for room in rooms:
+                            table_html += f'<td>{room["check_out"]}</td>'
+                        
+                        table_html += """
+                                </tr>
+                                <tr>
+                                    <th>Nights</th>
+                        """
+                        
+                        for room in rooms:
+                            table_html += f'<td>{room["nights"]}</td>'
+                        
+                        table_html += """
+                                </tr>
+                                <tr>
+                                    <th>Guests</th>
+                        """
+                        
+                        for room in rooms:
+                            table_html += f'<td>{room["guests"]}</td>'
+                        
+                        table_html += """
+                                </tr>
+                                <tr>
+                                    <th>Rate</th>
+                        """
+                        
+                        for room in rooms:
+                            table_html += f'<td>{room["rate"]}</td>'
+                        
+                        # Close the table
+                        table_html += """
+                                </tr>
+                            </table>
+                        </div>
+                        """
+                        
+                        # Output the complete table
+                        st.markdown(table_html, unsafe_allow_html=True)
+                    
                     # Footer section
                     st.markdown(f"""
                     **Payment Information**
                     - Initial deposit: 20% (due within 3 days)
                     - Final balance: Due 60 days before check-in  
                     
-                     <a href="https://holidayniseko.evoke.jp/public/yourbooking.jsf?id={self.eId}&em={self.guest_email}">Pay securely in your local currency here</a>
+                    <a href="https://holidayniseko.evoke.jp/public/yourbooking.jsf?id={self.eId}&em={self.guest_email}">Pay securely in your local currency here</a>
 
                     *We've partnered with Flywire to offer payments in your local currency, reducing exchange fees while we receive payment in JPY.*
 
                     **Important Links**
                     - <a href="https://holidayniseko.com/terms-and-conditions"> Terms and Conditions</a>
                     - <a href="https://holidayniseko2.evoke.jp/public/booking/order02.jsf?mv=1&vs=WinterGuestServices&bookingEid={self.eId}">Book Guest Services (transfers, rentals, lessons)</a>
-                    - 
                     - <a href="https://holidayniseko.com/sites/default/files/services/2024-08/Holiday%20Niseko%20Guest%20Service%20Guide%202024_2025.pdf">2023/24 Guest Services Guide for reference only - to be updated for winter 2024/25</a>
                     - <a href="https://holidayniseko.com/faq">FAQ</a>
                     - <a href="https://holidayniseko.com/my-booking">Login to MyBooking to check your details anytime</a>
-
 
                     *We recommend securing travel insurance to protect your booking.*
                     """, unsafe_allow_html=True)
                         
         except Exception as e:
             st.error(f"Error in write_booking_confirmation: {str(e)}")
+            import traceback
+            st.error(traceback.format_exc())
 
     def write_links_box(self):
 
@@ -1190,8 +1261,6 @@ class Booking:
                 st.markdown(f"[Rhythm referral link](%s)" % rhythm_referral_link)
                 st.markdown(f"[Guest Service Guide link](%s)" % gsg_link)
                 
-
-
 
 
     def write_key_booking_info(self):
@@ -1242,7 +1311,6 @@ class Booking:
             st.write(self.guest_email)
         
 
-
     def write_email_subject(self):
 
         """Subject line for the email"""
@@ -1272,38 +1340,196 @@ class Booking:
 
 
     def write_room_info(self, room_list_todf):
-        
-        """Take room dictionary return the room 
-        
-        info in df format to write to streamlit
         """
-
-        # init dataframe for accom bookings
-        booking_df = pd.DataFrame(
-                            room_list_todf,
-                            columns=[
-                                "Property", "Room", "Check-in", "Check-out",
-                                "Nights", "Guests",  "Rate"])
-
-        st.markdown(f"###### Booking #{self.eId}")
-
-        # Here I set the accom min check in and max check out
-        self.accom_checkin = booking_df["Check-in"].min()
-        self.accom_checkout = booking_df["Check-out"].max()
-
-
-
-        st.markdown(booking_df.style.hide(axis="index")\
-            .set_table_styles([{'selector': 'th', 
-                                'props': [('font-size',
-                                            '10pt'),('text-align','center')]}])\
-            .set_properties(**{'font-size': '8pt',
-                               'text-align':'center'}).to_html(),
-                               unsafe_allow_html=True)
-
-   
+        Display room information in a multi-column table, similar to the booking confirmation format.
+        Rooms are grouped by property and displayed side by side when possible.
+        """
+        # Return early if no room data
+        if not room_list_todf or len(room_list_todf) == 0:
+            st.warning("No room information available.")
+            return None
+        
+        st.markdown(f"###### Room Information")
+        
+        # First, apply CSS for the table
+        st.markdown("""
+            <style>
+            .table-wrapper {
+                border: 1px solid #e0e0e0;
+                border-top: 4px solid #0C8C3C;
+                background: white;
+                padding: 0;
+                margin: 0 0 20px 0;
+                white-space: nowrap;
+                overflow-x: auto;
+                max-width: 100%;
+                display: inline-block;
+            }
+            .single-room-table {
+                width: 350px;
+                border-collapse: collapse;
+                font-size: 14px;
+            }
+            .multi-room-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 14px;
+            }
+            .header-row {
+                background: white;
+                border-bottom: 1px solid #e0e0e0;
+            }
+            .header-cell {
+                padding: 15px;
+                color: #333;
+                text-align: left;
+            }
+            .booking-id {
+                color: #000000;
+                font-size: 14px;
+                margin: 0 0 10px 0;
+            }
+            .property-row th {
+                font-weight: 500;
+                color: #333;
+                background: #f8f8f8;
+                padding: 10px;
+                border: 1px solid #e0e0e0;
+            }
+            th {
+                width: 130px;
+                font-weight: 500;
+                color: #333;
+                background: #f8f8f8;
+                padding: 10px;
+                border: 1px solid #e0e0e0;
+            }
+            td {
+                background: white;
+                padding: 10px;
+                border: 1px solid #e0e0e0;
+                text-align: center;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+        
+        # Group rooms by property
+        rooms_by_property = {}
+        for room in room_list_todf:
+            property_name = room[0]  # Property is first item
+            if property_name not in rooms_by_property:
+                rooms_by_property[property_name] = []
+            rooms_by_property[property_name].append(room)
+        
+        # Set min check-in and max check-out for email subject
+        all_checkins = []
+        all_checkouts = []
+        
+        # For each property, create a table with all its rooms
+        for property_name, rooms in rooms_by_property.items():
+            # Determine table class based on room count
+            table_class = "single-room-table" if len(rooms) == 1 else "multi-room-table"
+            
+            # Start building the table
+            table_html = f"""
+            <div class="table-wrapper">
+                <table class="{table_class}">
+                    <tr class="header-row">
+                        <td colspan="{len(rooms) + 1}" class="header-cell" style="text-align: left; padding-left: 20px;">
+                            <div class="booking-id"><strong>Booking ID: #{self.eId}</strong></div>
+                        </td>
+                    </tr>
+                    <tr class="property-row">
+                        <th>Property</th>
+                        <th colspan="{len(rooms)}">{property_name}</th>
+                    </tr>
+                    <tr>
+                        <th>Room</th>
+            """
+            
+            # Add room names
+            for room in rooms:
+                table_html += f'<td>{room[1]}</td>'  # Room name is second item
+            
+            # Add check-in dates
+            table_html += """
+                    </tr>
+                    <tr>
+                        <th>Check-in</th>
+            """
+            for room in rooms:
+                checkin_raw = room[2]  # Check-in is third item
+                all_checkins.append(checkin_raw)
+                # Format date to Jan 02, 2025 format
+                try:
+                    checkin_date = pd.to_datetime(checkin_raw)
+                    formatted_checkin = checkin_date.strftime('%b %d, %Y')
+                except:
+                    formatted_checkin = checkin_raw  # Keep original if parsing fails
+                table_html += f'<td>{formatted_checkin}</td>'
+            
+            # Add check-out dates
+            table_html += """
+                    </tr>
+                    <tr>
+                        <th>Check-out</th>
+            """
+            for room in rooms:
+                checkout_raw = room[3]  # Check-out is fourth item
+                all_checkouts.append(checkout_raw)
+                # Format date to Jan 02, 2025 format
+                try:
+                    checkout_date = pd.to_datetime(checkout_raw)
+                    formatted_checkout = checkout_date.strftime('%b %d, %Y')
+                except:
+                    formatted_checkout = checkout_raw  # Keep original if parsing fails
+                table_html += f'<td>{formatted_checkout}</td>'
+            
+            # Add nights
+            table_html += """
+                    </tr>
+                    <tr>
+                        <th>Nights</th>
+            """
+            for room in rooms:
+                table_html += f'<td>{room[4]}</td>'  # Nights is fifth item
+            
+            # Add guests
+            table_html += """
+                    </tr>
+                    <tr>
+                        <th>Guests</th>
+            """
+            for room in rooms:
+                table_html += f'<td>{room[5]}</td>'  # Guests is sixth item
+            
+            # Add rates
+            table_html += """
+                    </tr>
+                    <tr>
+                        <th>Rate</th>
+            """
+            for room in rooms:
+                table_html += f'<td>{room[6]}</td>'  # Rate is seventh item
+            
+            # Close the table
+            table_html += """
+                    </tr>
+                </table>
+            </div>
+            """
+            
+            # Output the table
+            st.markdown(table_html, unsafe_allow_html=True)
+        
+        # Set min check-in and max check-out
+        if all_checkins:
+            self.accom_checkin = min(all_checkins)
+        if all_checkouts:
+            self.accom_checkout = max(all_checkouts)
+        
         return None
-    
+
     def write_cognito(self):
 
         """Queries the google sheet to check if

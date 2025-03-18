@@ -81,11 +81,11 @@ if user_input:
 
         
         with row0[1]:
-                with st.container():
+                # with st.container():
                         
-                    bk.write_room_info(bk.room_list_todf) 
-                    st.write("---")
-                    bk.write_payment_df()
+                bk.write_room_info(bk.room_list_todf) 
+                st.write("---")
+                bk.write_payment_df()
                 
 
 
