@@ -128,7 +128,7 @@ def get_recent_entries(n=5):
     # Try to convert timestamp to datetime for proper sorting
     if 'Timestamp' in df.columns:
         df['Timestamp'] = pd.to_datetime(df['Timestamp'], errors='coerce')
-        df = df.sort_values('Timestamp', ascending=False)
+        df = df.sort_values('Timestamp', ascending=True)
     
     # Return the top n rows
     return df.head(n)
