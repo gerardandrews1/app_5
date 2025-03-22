@@ -162,3 +162,30 @@ if 'api_response' in st.session_state:
 
 else:
     st.info("Enter a Package ID or Booking ID in the sidebar to fetch data")
+
+
+
+with st.form(key="data_form"):
+    # Form fields - customize these based on your requirements
+    first_name = st.text_input("First Name")
+    last_name = st.text_input("Last Name")
+    email =  st.text_input("Email")
+    country = st.text_area("Country")
+    comments = st.text_area("Comments")
+
+    # Add a timestamp field (hidden from the user)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Submit button
+    submit_button = st.form_submit_button(label="Submit Data")
+
+    # Handle form submission
+    if submit_button:
+    # Create a dictionary with the form data
+        form_data = {
+            "Timestamp": timestamp,
+            "Name": name,
+            "Email": email,
+            "Age": age,
+            "Feedback": feedback
+        }

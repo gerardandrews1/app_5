@@ -13,6 +13,7 @@ from ratelimit import limits, sleep_and_retry
 from src.components.api_list_booking import call_api
 from src.components.booking import Booking
 
+
 # page and column setup
 st.set_page_config(page_title = "List Booking",
                    layout="wide")
@@ -28,8 +29,8 @@ st.markdown(
 row0 = st.columns([1.8,2.5, 1.8])
 divider = st.columns(1)
 
-row1 = st.columns([2, 2.8, 2.5])
-row2 = st.columns([2, 2.5, 2])
+row1 = st.columns([4, 2, 2.5])
+row2 = st.columns([4, 2, 2])
 
 # with open('style.css') as f:
 #     st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html = True)
@@ -93,12 +94,12 @@ if user_input:
         with divider[0]: st.write("---")
         
         # write email templates 
-        with row1[2]: 
+        with row1[0]: 
             
             with st.container():
-                bk.write_booking_confirmation()
-
+                
                 bk.write_email_subject()
+                bk.write_booking_confirmation()
                 bk.write_gsg_upsell()
                 bk.write_first_ota_email()
                 bk.write_second_OTA_email()
@@ -106,7 +107,7 @@ if user_input:
                 bk.write_overdue_email()
 
 
-        with row1[0]:
+        with row1[2]:
             with st.container():
                 bk.write_links_box()
 
